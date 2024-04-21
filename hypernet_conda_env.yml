@@ -164,4 +164,4 @@ dependencies:
       - torchinfo==1.8.0
       - tqdm==4.66.2
       - urllib3==1.26.18
-# prefix: C:\Users\mengz\anaconda3\envs\hyperBCI
+# ==prefix: C:\Users\mengz\anaconda3\envs\hyperBCI
