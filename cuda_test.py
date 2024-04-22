@@ -8,7 +8,8 @@ device = 'cuda' if cuda else 'cpu'
 if cuda:
     print("Nvidia CUDA is available")
     torch.backends.cudnn.benchmark = True
-print("Only CPU available")
+else:
+    print("Only CPU available")
 
 # Test saving files
 dir_results = 'results/'
