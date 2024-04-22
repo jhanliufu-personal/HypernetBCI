@@ -33,6 +33,8 @@ dataset_name = 'Schirrmeister2017'
 subject_ids_lst = list(range(1, 14))
 dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=subject_ids_lst)
 
+print('Data loaded')
+
 experiment_version = 3
 results_file_name = f'{model_name}_{dataset_name}_from_scratch_{experiment_version}'
 dir_results = 'results/'
@@ -87,6 +89,8 @@ preprocessors = [
 # Transform the data
 preprocess(dataset, preprocessors, n_jobs=-1)
 
+print('Preprocessing done')
+
 ### ----------------------------- Extract trial windows -----------------------------
 trial_start_offset_seconds = -0.5
 # Extract sampling frequency, check that they are same in all datasets
@@ -103,6 +107,8 @@ windows_dataset = create_windows_from_events(
     trial_stop_offset_samples=0,
     preload=True,
 )
+
+print('Trial windows extracted')
 
 ### ----------------------------- Create model -----------------------------
 # check if GPU is available, if True choose to use it
