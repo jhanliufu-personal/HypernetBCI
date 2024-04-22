@@ -30,7 +30,7 @@ model_name = 'ShallowFBCSPNet'
 model_object = import_model(model_name)
 
 dataset_name = 'Schirrmeister2017'
-subject_ids_lst = list(range(1, 15))
+subject_ids_lst = list(range(1, 14))
 dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=subject_ids_lst)
 
 experiment_version = 3
