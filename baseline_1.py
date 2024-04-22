@@ -33,7 +33,7 @@ dataset_name = 'Schirrmeister2017'
 subject_ids_lst = list(range(1, 15))
 dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=subject_ids_lst)
 
-experiment_version = 1
+experiment_version = 3
 results_file_name = f'{model_name}_{dataset_name}_from_scratch_{experiment_version}'
 dir_results = 'results/'
 
