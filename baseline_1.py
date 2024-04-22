@@ -191,7 +191,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
             _ = cur_clf.fit(cur_train_set, y=None, epochs=n_epochs)
         
             # results_columns = ['train_loss', 'valid_loss', 'train_accuracy', 'valid_accuracy']
-            results_columns = ['valid_accuracy',]
+            results_columns = ['train_accuracy', 'valid_accuracy',]
             df = pd.DataFrame(cur_clf.history[:, results_columns], columns=results_columns,
                               index=cur_clf.history[:, 'epoch'])
             
