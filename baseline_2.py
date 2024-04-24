@@ -164,23 +164,29 @@ for holdout_subj_id in subject_ids_lst:
     pre_train_train_set_lst = []
     pre_train_test_set_lst = []
     for key, val in pre_train_set.split('subject').items():
+        print(f'Splitting data of subject {key}')
         subj_splitted_by_run = val.split('run')
 
         cur_train_set = subj_splitted_by_run.get('0train')
         print('cur_train_set metadata:')
         print(cur_train_set.get_metadata())
-        pre_train_train_set_lst.extend(cur_train_set)
+        # pre_train_train_set_lst.extend(cur_train_set)
+        pre_train_train_set_lst.append(cur_train_set)
 
         cur_test_set = subj_splitted_by_run.get('1test')
         print('cur_test_set metadata:')
         print(cur_test_set.get_metadata())
-        pre_train_test_set_lst.extend(cur_test_set)
+        # pre_train_test_set_lst.extend(cur_test_set)
+        pre_train_test_set_lst.append(cur_test_set)
     
     pre_train_train_set = BaseConcatDataset(pre_train_train_set_lst)
     print('pre_train_train_set metadata:')
+    print(pre_train_train_set_lst)
     print(pre_train_train_set.get_metadata())
+
     pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
     print('pre_train_test_set metadata:')
+    print(pre_train_test_set_lst)
     print(pre_train_test_set.get_metadata())
     ### ------------------------------
 
