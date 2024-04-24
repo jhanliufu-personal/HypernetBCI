@@ -5,6 +5,8 @@ all other subjects.
 
 This is a very head-empty approach, since no distinction bewteen subjects
 is made within the pre-train dataset.
+
+For other approaches, check out the meta learning papers
 '''
 
 import matplotlib.pyplot as plt
@@ -15,7 +17,6 @@ from braindecode.preprocessing import (Preprocessor,
                                        preprocess)
 from braindecode.preprocessing import create_windows_from_events
 import torch
-# from braindecode.models import ShallowFBCSPNet
 from braindecode.util import set_random_seeds
 from skorch.callbacks import LRScheduler
 from skorch.helper import predefined_split
@@ -42,6 +43,7 @@ results_file_name = f'{model_name}_{dataset_name}_finetune_{experiment_version}'
 dir_results = 'results/'
 # used to store pre-trained model parameters
 temp_exp_name = f'baseline_2_{experiment_version}_pretrain'
+file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ---------- Training parameters ----------
 # pretrain parameters
@@ -183,8 +185,6 @@ for holdout_subj_id in subject_ids_lst:
     model_exist = True
     for file_end in ['_model.pkl', '_opt.pkl', '_history.json']:
         cur_file_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}{file_end}')
-        # cur_file_exist = os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
-        # model_exist = model_exist and cur_file_exist
         model_exist = model_exist and os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
 
     if model_exist:
@@ -294,9 +294,7 @@ for holdout_subj_id in subject_ids_lst:
             _ = new_clf.partial_fit(cur_finetune_subj_train_subset, y=None, epochs=finetune_n_epochs)
     
             ## Get results after fine tuning
-            df = pd.DataFrame(new_clf.history[:, results_columns], columns=results_columns,
-                              # index=new_clf.history[:, 'epoch'],
-                             )
+            df = pd.DataFrame(new_clf.history[:, results_columns], columns=results_columns,)
     
             cur_final_acc = np.mean(df.tail(5).valid_accuracy)
             final_accuracy.append(cur_final_acc)
@@ -304,12 +302,14 @@ for holdout_subj_id in subject_ids_lst:
         dict_subj_results.update({finetune_training_data_amount: final_accuracy})
 
     dict_results.update({holdout_subj_id: dict_subj_results})
-
-### ----------------------------- Save results -----------------------------
-file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
-
-with open(file_path, 'wb') as f:
-    pickle.dump(dict_results, f)
+    ### ----------------------------- Save results -----------------------------
+    # Save results after done with a subject, in case server crashes
+    # remove existing results file if one exists
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    # save the updated one
+    with open(file_path, 'wb') as f:
+        pickle.dump(dict_results, f)
 
 # check if results are saved correctly
 if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
