@@ -34,7 +34,7 @@ model_name = 'ShallowFBCSPNet'
 model_object = import_model(model_name)
 
 dataset_name = 'Schirrmeister2017'
-subject_ids_lst = list(range(1, 15))
+subject_ids_lst = list(range(1, 4))
 dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=subject_ids_lst)
 
 experiment_version = 4
@@ -51,6 +51,7 @@ batch_size = 64
 n_epochs = 30
 # if test_pretrain = True, the fine tune step is skipped
 test_pretrain = True
+skip_preprocess = True
 
 # finetune parameters
 finetune_lr = 0.065 * 0.01
@@ -74,28 +75,29 @@ elif data_amount_unit == 'min':
 significance_level = 0.95
 
 ### ----------------------------- Preprocessing -----------------------------
-low_cut_hz = 4.  
-high_cut_hz = 38. 
-# Parameters for exponential moving standardization
-factor_new = 1e-3
-init_block_size = 1000
-# Factor to convert from V to uV
-factor = 1e6
+if not skip_preprocess:
+    low_cut_hz = 4.  
+    high_cut_hz = 38. 
+    # Parameters for exponential moving standardization
+    factor_new = 1e-3
+    init_block_size = 1000
+    # Factor to convert from V to uV
+    factor = 1e6
 
-preprocessors = [
-    # Keep EEG sensors
-    Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
-    # Convert from V to uV
-    Preprocessor(lambda data: multiply(data, factor)), 
-    # Bandpass filter
-    Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
-    # Exponential moving standardization
-    Preprocessor(exponential_moving_standardize,  
-                 factor_new=factor_new, init_block_size=init_block_size)
-]
+    preprocessors = [
+        # Keep EEG sensors
+        Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
+        # Convert from V to uV
+        Preprocessor(lambda data: multiply(data, factor)), 
+        # Bandpass filter
+        Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
+        # Exponential moving standardization
+        Preprocessor(exponential_moving_standardize,  
+                    factor_new=factor_new, init_block_size=init_block_size)
+    ]
 
-# Transform the data
-preprocess(dataset, preprocessors, n_jobs=-1)
+    # Transform the data
+    preprocess(dataset, preprocessors, n_jobs=-1)
 
 ### ----------------------------- Extract trial windows -----------------------------
 trial_start_offset_seconds = -0.5
@@ -167,7 +169,11 @@ for holdout_subj_id in subject_ids_lst:
         pre_train_test_set_lst.extend(subj_splitted_lst_by_run.get('1test'))
     
     pre_train_train_set = BaseConcatDataset(pre_train_train_set_lst)
+    print('pre_train_train_set metadata:')
+    print(pre_train_train_set.get_metadata())
     pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
+    print('pre_train_test_set metadata:')
+    print(pre_train_test_set.get_metadata())
     ### ------------------------------
 
     ### ---------- Pre-training ----------
