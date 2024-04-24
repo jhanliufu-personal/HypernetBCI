@@ -50,7 +50,7 @@ weight_decay = 0
 batch_size = 64
 n_epochs = 30
 # if test_pretrain = True, the fine tune step is skipped
-test_pretrain = True
+test_pretrain = False
 skip_preprocess = False
 
 # finetune parameters
@@ -168,58 +168,58 @@ for holdout_subj_id in subject_ids_lst:
         subj_splitted_by_run = val.split('run')
 
         cur_train_set = subj_splitted_by_run.get('0train')
-        # print('cur_train_set metadata:')
-        # print(cur_train_set.get_metadata())
         # pre_train_train_set_lst.extend(cur_train_set)
         pre_train_train_set_lst.append(cur_train_set)
 
         cur_test_set = subj_splitted_by_run.get('1test')
-        # print('cur_test_set metadata:')
-        # print(cur_test_set.get_metadata())
         # pre_train_test_set_lst.extend(cur_test_set)
         pre_train_test_set_lst.append(cur_test_set)
     
     pre_train_train_set = BaseConcatDataset(pre_train_train_set_lst)
-    # print('pre_train_train_set metadata:')
-    # print(pre_train_train_set_lst)
-    # print(pre_train_train_set.get_metadata())
-
     pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
-    # print('pre_train_test_set metadata:')
-    # print(pre_train_test_set_lst)
-    # print(pre_train_test_set.get_metadata())
     ### ------------------------------
 
-    ### ---------- Pre-training ----------
-    cur_model = model_object(
-        n_chans,
-        n_classes,
-        input_window_samples=input_window_samples,
-        final_conv_length='auto',
-    )
-    
-    cur_clf = EEGClassifier(
-        cur_model,
-        criterion=torch.nn.NLLLoss,
-        optimizer=torch.optim.AdamW,
-        train_split=predefined_split(pre_train_test_set), 
-        optimizer__lr=lr,
-        optimizer__weight_decay=weight_decay,
-        batch_size=batch_size,
-        callbacks=[
-            "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
-        ],
-        device=device,
-        classes=classes,
-        warm_start=False
-    )
+    # check if a pretrained model exists
+    model_exist = True
+    for file_end in ['_model.pkl', '_opt.pkl', '_history.json']:
+        cur_file_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}{file_end}')
+        # cur_file_exist = os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
+        # model_exist = model_exist and cur_file_exist
+        model_exist = model_exist and os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
 
-    print(f'Pre-training model with data from all subjects ({len(pre_train_train_set)} trials) but subject {holdout_subj_id}')
-    _ = cur_clf.fit(pre_train_train_set, y=None, epochs=n_epochs)
+    if model_exist:
+        print(f'A pre-trained model for holdout subject {holdout_subj_id} exists')
+    else:
+        ### ---------- Pre-training ----------
+        cur_model = model_object(
+            n_chans,
+            n_classes,
+            input_window_samples=input_window_samples,
+            final_conv_length='auto',
+        )
+        
+        cur_clf = EEGClassifier(
+            cur_model,
+            criterion=torch.nn.NLLLoss,
+            optimizer=torch.optim.AdamW,
+            train_split=predefined_split(pre_train_test_set), 
+            optimizer__lr=lr,
+            optimizer__weight_decay=weight_decay,
+            batch_size=batch_size,
+            callbacks=[
+                "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
+            ],
+            device=device,
+            classes=classes,
+            warm_start=False
+        )
 
-    cur_clf.save_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
-                        f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
-                        f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+        print(f'Pre-training model with data from all subjects ({len(pre_train_train_set)} trials) but subject {holdout_subj_id}')
+        _ = cur_clf.fit(pre_train_train_set, y=None, epochs=n_epochs)
+
+        cur_clf.save_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
 
     if test_pretrain:
         continue
