@@ -203,6 +203,7 @@ for holdout_subj_id in subject_ids_lst:
         classes=classes,
         warm_start=False
     )
+    cur_clf.initialize()
 
     # check if a pretrained model exists
     model_exist = True
