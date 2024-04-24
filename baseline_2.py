@@ -143,7 +143,7 @@ for holdout_subj_id in subject_ids_lst:
     print(f'Hold out data from subject {holdout_subj_id}')
     
     ### ---------- Split dataset into pre-train set and fine-tune (holdout) set ----------
-    pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in range(1, 10) if i != holdout_subj_id])
+    pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in subject_ids_lst if i != holdout_subj_id])
     fine_tune_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
 
     ### ---------- Split pre-train set into pre-train-train set and pre-train-test set ----------
