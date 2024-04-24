@@ -181,6 +181,29 @@ for holdout_subj_id in subject_ids_lst:
     pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
     ### ------------------------------
 
+    cur_model = model_object(
+            n_chans,
+            n_classes,
+            input_window_samples=input_window_samples,
+            final_conv_length='auto',
+        )
+        
+    cur_clf = EEGClassifier(
+        cur_model,
+        criterion=torch.nn.NLLLoss,
+        optimizer=torch.optim.AdamW,
+        train_split=predefined_split(pre_train_test_set), 
+        optimizer__lr=lr,
+        optimizer__weight_decay=weight_decay,
+        batch_size=batch_size,
+        callbacks=[
+            "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
+        ],
+        device=device,
+        classes=classes,
+        warm_start=False
+    )
+
     # check if a pretrained model exists
     model_exist = True
     for file_end in ['_model.pkl', '_opt.pkl', '_history.json']:
@@ -188,35 +211,15 @@ for holdout_subj_id in subject_ids_lst:
         model_exist = model_exist and os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
 
     if model_exist:
+        ### Load trained model
         print(f'A pre-trained model for holdout subject {holdout_subj_id} exists')
+        cur_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
     else:
         ### ---------- Pre-training ----------
-        cur_model = model_object(
-            n_chans,
-            n_classes,
-            input_window_samples=input_window_samples,
-            final_conv_length='auto',
-        )
-        
-        cur_clf = EEGClassifier(
-            cur_model,
-            criterion=torch.nn.NLLLoss,
-            optimizer=torch.optim.AdamW,
-            train_split=predefined_split(pre_train_test_set), 
-            optimizer__lr=lr,
-            optimizer__weight_decay=weight_decay,
-            batch_size=batch_size,
-            callbacks=[
-                "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
-            ],
-            device=device,
-            classes=classes,
-            warm_start=False
-        )
-
         print(f'Pre-training model with data from all subjects ({len(pre_train_train_set)} trials) but subject {holdout_subj_id}')
         _ = cur_clf.fit(pre_train_train_set, y=None, epochs=n_epochs)
-
         cur_clf.save_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
                             f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                             f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
