@@ -49,14 +49,16 @@ lr = 0.065 * 0.01
 weight_decay = 0
 batch_size = 64
 n_epochs = 30
+# if test_pretrain = True, the fine tune step is skipped
+test_pretrain = True
 
 # finetune parameters
 finetune_lr = 0.065 * 0.01
 finetune_weight_decay = 0
 finetune_n_epochs = 20
 
-data_amount_step = 5 # trials
-repetition = 10
+data_amount_step = 40 # trials
+repetition = 5
 n_classes = 4
 
 ### ----------------------------- Plotting parameters -----------------------------
@@ -192,12 +194,15 @@ for holdout_subj_id in subject_ids_lst:
         warm_start=False
     )
 
-    print(f'Pre-training model with data from all subjects but subject {holdout_subj_id}')
+    print(f'Pre-training model with data from all subjects ({len(pre_train_train_set)} trials) but subject {holdout_subj_id}')
     _ = cur_clf.fit(pre_train_train_set, y=None, epochs=n_epochs)
 
     cur_clf.save_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
                         f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                         f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+
+    if test_pretrain:
+        continue
 
     ### ---------- Split fine tune set into fine tune-train set and fine tune-valid set ----------
     ### THIS PART IS FOR BCNI2014001
