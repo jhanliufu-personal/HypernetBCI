@@ -51,7 +51,7 @@ batch_size = 64
 n_epochs = 30
 # if test_pretrain = True, the fine tune step is skipped
 test_pretrain = True
-skip_preprocess = True
+skip_preprocess = False
 
 # finetune parameters
 finetune_lr = 0.065 * 0.01
