@@ -221,7 +221,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
                 batch_size=batch_size,
                 callbacks=callbacks,
                 device=device,
-                classes=np.unique(y_train),
+                classes=np.unique(y_test),
             )
             clf.fit(train_subset, y=None, epochs=n_epochs)
 
