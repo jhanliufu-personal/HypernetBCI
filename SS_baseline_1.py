@@ -44,7 +44,7 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 # data_amount_step = 40
 data_amount_step = 200 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
-repetition = 5
+repetition = 1
 # 'n_classes' class classification task
 n_classes = 5
 # learning rate
