@@ -161,6 +161,8 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             # Balance for imbalanced class representation
             y_train = [train_subset[idx][1] for idx in train_sampler]
             class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+            print(np.unique(y_train))
+            print(class_weights)
 
             # SleepStagerChambon2018
             feat_extractor = model_object(
