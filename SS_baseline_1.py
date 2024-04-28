@@ -142,9 +142,11 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
     )
     test_set.target_transform = get_center_label
     y_test = [test_set[idx][1] for idx in test_sampler]
-    class_weights = compute_class_weight('balanced', classes=np.unique(y_test), y=y_test)
-    print(np.unique(y_test))
-    print(class_weights)
+    new_class_weights = compute_class_weight('balanced', classes=np.unique(y_test), y=y_test)
+
+    # Only update class_weights if generated weights for all classes
+    if len(new_class_weights) == n_classes:
+        class_weights = new_class_weights
 
     train_set_size = len(train_set)
     for training_data_amount in np.arange(1, train_set_size // data_amount_step) * data_amount_step:
@@ -176,7 +178,6 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
                 n_times=input_size_samples,
                 return_feats=True
             )
-
             model = nn.Sequential(
                 # apply model on each 30-s window
                 TimeDistributed(feat_extractor),  
