@@ -23,6 +23,9 @@ from skorch.callbacks import EpochScoring
 
 from utils import get_subset, import_model, get_center_label
 
+import warnings
+warnings.filterwarnings('ignore')
+
 ### ----------------------------- Experiment parameters -----------------------------
 model_name = 'SleepStagerChambon2018'
 model_object = import_model(model_name)
