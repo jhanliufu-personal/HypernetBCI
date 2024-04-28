@@ -3,6 +3,7 @@ from braindecode.datasets.base import EEGWindowsDataset
 from importlib import import_module
 import random
 from numbers import Integral
+import numpy as np
 
 
 def generate_non_repeating_integers(x, y):
