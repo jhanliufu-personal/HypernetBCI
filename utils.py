@@ -9,7 +9,7 @@ import numpy as np
 def generate_non_repeating_integers(x, y):
     # Check if y is greater than x
     if y < x:
-        raise ValueError("y must be greater than or equal to x")
+        raise ValueError(f"y must be greater than or equal to x; Got y={y}, x={x}")
     
     # Generate x non-repeating integers between 0 and y
     return random.sample(range(y), x)
