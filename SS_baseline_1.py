@@ -146,7 +146,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
         for i in range(repetition):
             
             # Get subset of train set
-            print(f'training_data_amount={training_data_amount}')
+            print(f'training_data_amount={training_data_amount}, train_set_size={train_set_size}')
             train_subset = get_subset(train_set, target_trial_num=int(training_data_amount), random_sample=True)
             # Extract train sequences
             train_sampler = SequenceSampler(
