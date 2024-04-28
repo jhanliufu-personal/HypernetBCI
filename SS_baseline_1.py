@@ -43,7 +43,8 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ----------------------------- Training parameters -----------------------------
 # Increment training set size by 'data_amount_step' each time
-data_amount_step = 50
+data_amount_start = 100
+data_amount_step = 20
 # data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
 repetition = 1 
@@ -149,7 +150,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
         class_weights = new_class_weights
 
     train_set_size = len(train_set)
-    for training_data_amount in np.arange(1, train_set_size // data_amount_step) * data_amount_step:
+    for training_data_amount in data_amount_start + np.arange(0, 1 + (train_set_size - data_amount_start) // data_amount_step) * data_amount_step:
 
         final_accuracy = []
 
