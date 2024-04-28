@@ -46,7 +46,7 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 data_amount_step = 40
 # data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
-repetition = 1
+repetition = 1 
 # 'n_classes' class classification task
 n_classes = 5
 # learning rate
@@ -187,7 +187,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
 
             print(f'Currently training for subject {subject_id} with {len(train_sampler)}={len(y_train)} sequences = {training_data_amount} trials')
             
-            batch_size = min(32, training_data_amount // 2)
+            batch_size = int(min(32, training_data_amount // 2))
             
             train_bal_acc = EpochScoring(
                 scoring='balanced_accuracy', on_train=True, name='train_bal_acc',
