@@ -225,14 +225,16 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             final_accuracy.append(cur_final_acc)
 
         dict_subj_results.update({training_data_amount: final_accuracy})
-        ### ----------------------------- Save results -----------------------------
-        # Save results after done with a subject, in case server crashes
-        # remove existing results file if one exists
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        # save the updated one
-        with open(file_path, 'wb') as f:
-            pkl.dump(dict_results, f)
+
+    dict_results.update({subject_id: dict_subj_results})
+    ### ----------------------------- Save results -----------------------------
+    # Save results after done with a subject, in case server crashes
+    # remove existing results file if one exists
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    # save the updated one
+    with open(file_path, 'wb') as f:
+        pkl.dump(dict_results, f)
 
 
 # check if results are saved correctly
