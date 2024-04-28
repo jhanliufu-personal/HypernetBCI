@@ -2,6 +2,8 @@ from braindecode.datasets import BaseConcatDataset
 from braindecode.datasets.base import EEGWindowsDataset
 from importlib import import_module
 import random
+from numbers import Integral
+
 
 def generate_non_repeating_integers(x, y):
     # Check if y is greater than x
@@ -10,6 +12,7 @@ def generate_non_repeating_integers(x, y):
     
     # Generate x non-repeating integers between 0 and y
     return random.sample(range(y), x)
+
 
 def sample_integers_sum_to_x(x, k):
     '''
@@ -22,6 +25,7 @@ def sample_integers_sum_to_x(x, k):
     differences = [parts[0]] + [parts[i] - parts[i-1] for i in range(1, k-1)] + [x - parts[-1]]
     
     return differences
+
 
 def get_subset(input_set, target_trial_num, random_sample=False, from_back=False):
     # check inputs
@@ -67,6 +71,7 @@ def get_subset(input_set, target_trial_num, random_sample=False, from_back=False
         if from_back:
             for ds in reversed(input_set.datasets):
                 assert isinstance(ds, EEGWindowsDataset)
+                cur_run_trial_num = len(ds.metadata)
                 if target_trial_num > cur_run_trial_num:
                     new_ds_lst.append(ds)
                     target_trial_num -= cur_run_trial_num
