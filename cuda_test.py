@@ -2,7 +2,7 @@ import torch
 import pickle as pkl
 import os
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 # check if GPU is available, if True chooses to use it
 cuda = torch.cuda.is_available()  
