@@ -61,10 +61,13 @@ def get_subset(input_set, target_trial_num, random_sample=False, from_back=False
                     new_ds_lst.append(EEGWindowsDataset(cur_ds.raw, cur_ds.metadata.iloc[trial_idx], 
                                                         description=cur_ds.description))
                 except ValueError:
-                    # If trying to sample more trials in current ds than there are
-                    # Get entire cur_ds, and get what's missing fromt the next ds
-                    new_ds_lst.append(cur_ds)
-                    trial_cnt_from_each_base_ds[i+1] += (cnt - len(cur_ds))
+                    try:
+                        # If trying to sample more trials in current ds than there are
+                        # Get entire cur_ds, and get what's missing fromt the next ds
+                        new_ds_lst.append(cur_ds)
+                        trial_cnt_from_each_base_ds[i+1] += (cnt - len(cur_ds))
+                    except IndexError:
+                        pass
 
     else:
     

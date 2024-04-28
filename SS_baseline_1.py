@@ -41,7 +41,7 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 ### ----------------------------- Training parameters -----------------------------
 # Increment training set size by 'data_amount_step' each time
 # data_amount_step = 40
-data_amount_step = 200 # for testing purpose use super big data_amount_step
+data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
 repetition = 1
 # 'n_classes' class classification task
@@ -49,7 +49,7 @@ n_classes = 5
 # learning rate
 lr = 1e-3
 batch_size = 32
-n_epochs = 30
+n_epochs = 50
 
 ### ----------------------------- Plotting parameters -----------------------------
 data_amount_unit = 'min'
@@ -147,7 +147,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             
             # Get subset of train set
             print(f'training_data_amount={training_data_amount}, train_set_size={train_set_size}')
-            train_subset = get_subset(train_set, target_trial_num=int(training_data_amount), random_sample=True)
+            train_subset = get_subset(train_set, target_trial_num=int(training_data_amount), random_sample=False)
             # Extract train sequences
             train_sampler = SequenceSampler(
                 train_subset.get_metadata(), n_windows, n_windows_stride, randomize=True
