@@ -212,7 +212,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
                 device=device,
                 classes=np.unique(y_train),
             )
-            clf.fit(train_set, y=None, epochs=n_epochs)
+            clf.fit(train_subset, y=None, epochs=n_epochs)
 
             # Get final accuracy
             results_columns = ['valid_bal_acc',]
