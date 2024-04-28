@@ -30,9 +30,9 @@ warnings.filterwarnings('ignore')
 model_name = 'SleepStagerChambon2018'
 model_object = import_model(model_name)
 dataset_name = 'SleepPhysionet'
-dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-# dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
+dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
 
 print('Data loaded')
 
@@ -81,7 +81,8 @@ preprocessors = [
 preprocess(dataset, preprocessors)
 
 ### ----------------------------- Extract trial windows -----------------------------
-mapping = {  # We merge stages 3 and 4 following AASM standards.
+# We merge stages 3 and 4 following AASM standards.
+mapping = {  
     'Sleep stage W': 0,
     'Sleep stage 1': 1,
     'Sleep stage 2': 2,
