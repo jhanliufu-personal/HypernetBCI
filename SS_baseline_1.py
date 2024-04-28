@@ -141,6 +141,10 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
         test_set.get_metadata(), n_windows, n_windows_stride, randomize=True
     )
     test_set.target_transform = get_center_label
+    y_test = [test_set[idx][1] for idx in test_sampler]
+    class_weights = compute_class_weight('balanced', classes=np.unique(y_test), y=y_test)
+    print(np.unique(y_test))
+    print(class_weights)
 
     train_set_size = len(train_set)
     for training_data_amount in np.arange(1, train_set_size // data_amount_step) * data_amount_step:
@@ -159,10 +163,10 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             train_subset.target_transform = get_center_label
 
             # Balance for imbalanced class representation
-            y_train = [train_subset[idx][1] for idx in train_sampler]
-            class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-            print(np.unique(y_train))
-            print(class_weights)
+            # y_train = [train_subset[idx][1] for idx in train_sampler]
+            # class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+            # print(np.unique(y_train))
+            # print(class_weights)
 
             # SleepStagerChambon2018
             feat_extractor = model_object(
