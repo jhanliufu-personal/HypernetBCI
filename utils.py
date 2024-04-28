@@ -42,7 +42,6 @@ def get_subset(input_set, target_trial_num, random_sample=False, from_back=False
         if base_ds_cnt == 1:
             cur_ds = input_set.datasets[0]
             trial_idx = generate_non_repeating_integers(target_trial_num, len(cur_ds))
-            # print(trial_idx[:4])
             new_ds_lst.append(EEGWindowsDataset(cur_ds.raw, cur_ds.metadata.iloc[trial_idx], 
                                                         description=cur_ds.description))
 

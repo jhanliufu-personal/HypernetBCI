@@ -139,7 +139,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
     test_set.target_transform = get_center_label
 
     train_set_size = len(train_set)
-    for training_data_amount in np.arange(1, (train_set_size // data_amount_step) + 1) * data_amount_step:
+    for training_data_amount in np.arange(1, train_set_size // data_amount_step) * data_amount_step:
 
         final_accuracy = []
 
