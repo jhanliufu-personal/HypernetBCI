@@ -27,9 +27,9 @@ from utils import get_subset, import_model, get_center_label
 model_name = 'SleepStagerChambon2018'
 model_object = import_model(model_name)
 dataset_name = 'SleepPhysionet'
-# dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
 
 print('Data loaded')
 
@@ -40,8 +40,8 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ----------------------------- Training parameters -----------------------------
 # Increment training set size by 'data_amount_step' each time
-# data_amount_step = 40
-data_amount_step = 400 # for testing purpose use super big data_amount_step
+data_amount_step = 40
+# data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
 repetition = 1
 # 'n_classes' class classification task
