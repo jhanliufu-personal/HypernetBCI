@@ -43,7 +43,7 @@ file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ----------------------------- Training parameters -----------------------------
 # Increment training set size by 'data_amount_step' each time
-data_amount_step = 40
+data_amount_step = 100
 # data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
 repetition = 1 
