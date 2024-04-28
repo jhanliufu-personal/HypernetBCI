@@ -192,7 +192,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             if cuda:
                 model.cuda()
 
-            print(f'Currently training for subject {subject_id} with {len(train_sampler)}={len(y_train)} sequences = {training_data_amount} trials')
+            print(f'Currently training for subject {subject_id} with {len(train_sampler)} sequences = {training_data_amount} trials')
             
             batch_size = int(min(32, training_data_amount // 2))
             
