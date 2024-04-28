@@ -8,3 +8,4 @@ from braindecode.datasets import MOABBDataset, SleepPhysionet
 
 # SleepPhysionet has 78 subjects and 2 recordings per subject
 sleepphysionet_dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+# sleepphysionet_dataset = SleepPhysionet(subject_ids=[1, 2, 3], recording_ids=[1, 2,], crop_wake_mins=30)

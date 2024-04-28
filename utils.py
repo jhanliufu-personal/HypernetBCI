@@ -23,7 +23,7 @@ def sample_integers_sum_to_x(x, k):
     
     return differences
 
-def get_subset(input_set, target_trial_num, random_sample=False):
+def get_subset(input_set, target_trial_num, random_sample=False, from_back=False):
     # check inputs
     assert isinstance(input_set, BaseConcatDataset)
     assert isinstance(target_trial_num, int)
@@ -64,17 +64,29 @@ def get_subset(input_set, target_trial_num, random_sample=False):
 
     else:
     
-        for ds in input_set.datasets:
-            assert isinstance(ds, EEGWindowsDataset)
-            cur_run_trial_num = len(ds.metadata)
-            if target_trial_num > cur_run_trial_num:
-                new_ds_lst.append(ds)
-                target_trial_num -= cur_run_trial_num
-            else:
-                new_ds_lst.append(EEGWindowsDataset(ds.raw, ds.metadata[:target_trial_num], description=ds.description))
-                break
+        if from_back:
+            for ds in reversed(input_set.datasets):
+                assert isinstance(ds, EEGWindowsDataset)
+                if target_trial_num > cur_run_trial_num:
+                    new_ds_lst.append(ds)
+                    target_trial_num -= cur_run_trial_num
+                else:
+                    new_ds_lst.append(EEGWindowsDataset(ds.raw, ds.metadata[-target_trial_num:], description=ds.description))
+                    break
+
+        else:
+            for ds in input_set.datasets:
+                assert isinstance(ds, EEGWindowsDataset)
+                cur_run_trial_num = len(ds.metadata)
+                if target_trial_num > cur_run_trial_num:
+                    new_ds_lst.append(ds)
+                    target_trial_num -= cur_run_trial_num
+                else:
+                    new_ds_lst.append(EEGWindowsDataset(ds.raw, ds.metadata[:target_trial_num], description=ds.description))
+                    break
 
     return BaseConcatDataset(new_ds_lst)
+
 
 def import_model(model_name: str) -> object:
     # try import from braindecode models first
@@ -87,3 +99,10 @@ def import_model(model_name: str) -> object:
     except AttributeError:
         # if braindecode doesn't have it, check locally defined models
         pass
+
+
+def get_center_label(x):
+    # Use label of center window in the sequence as sequence target
+    if isinstance(x, Integral):
+        return x
+    return x[np.ceil(len(x) / 2).astype(int)] if len(x) > 1 else x
