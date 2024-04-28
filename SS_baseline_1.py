@@ -30,9 +30,9 @@ warnings.filterwarnings('ignore')
 model_name = 'SleepStagerChambon2018'
 model_object = import_model(model_name)
 dataset_name = 'SleepPhysionet'
-# dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
 
 print('Data loaded')
 
@@ -47,7 +47,7 @@ data_amount_start = 100
 data_amount_step = 20
 # data_amount_step = 400 # for testing purpose use super big data_amount_step
 # Repeat for 'repetition' times for each training_data_amount
-repetition = 1 
+repetition = 3
 # 'n_classes' class classification task
 n_classes = 5
 # learning rate
@@ -194,7 +194,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             if cuda:
                 model.cuda()
 
-            print(f'Currently training for subject {subject_id} with {len(train_sampler)} sequences = {training_data_amount} trials')
+            print(f'Currently training for subject {subject_id} with {len(train_sampler)} sequences = {training_data_amount} trials (repetition {i})')
             
             batch_size = int(min(32, training_data_amount // 2))
             
