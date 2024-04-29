@@ -2,6 +2,7 @@ import torch
 import pickle as pkl
 import os
 
+# Specify which GPU to run on to avoid collisions
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 # check if GPU is available, if True chooses to use it

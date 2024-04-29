@@ -1,9 +1,12 @@
 from braindecode.datasets import BaseConcatDataset
 from braindecode.datasets.base import EEGWindowsDataset
+from sklearn.metrics import balanced_accuracy_score
 from importlib import import_module
 import random
 from numbers import Integral
 import numpy as np
+import argparse
+import json
 
 
 def generate_non_repeating_integers(x, y):
@@ -114,3 +117,45 @@ def get_center_label(x):
     if isinstance(x, Integral):
         return x
     return x[np.ceil(len(x) / 2).astype(int)] if len(x) > 1 else x
+
+
+def balanced_accuracy_multi(model, X, y):
+    y_pred = model.predict(X)
+    return balanced_accuracy_score(y.flatten(), y_pred.flatten())
+
+
+def parse_training_config():
+    parser = argparse.ArgumentParser(description='HypernetBCI Training and Testing')
+    parser.add_argument('--json', default=None, type=str, help='Path to JSON configuration file')
+    parser.add_argument('--gpu_number', default='0', choices=range(4), type=str, help='BBQ cluster has 4 gpus')
+    parser.add_argument('--experiment_version', default='1_1', type=str, help='1 -> train from scratch, 2 -> fine tune')
+    parser.add_argument('--model_name', default='SleepStagerChambon2018', type=str)
+    parser.add_argument('--model_kwargs', default=None)
+    parser.add_argument('--dataset_name', default='SleepPhysionet', type=str)
+    parser.add_argument('--data_amount_start', default=0, type=int)
+    parser.add_argument('--data_amount_step', default=20, type=int, 
+                        help='Increment training set size by this much each time. \
+                            For testing purpose use super big data_amount_step')
+    parser.add_argument('--trial_len_sec', default=30, type=float)
+    parser.add_argument('--data_amount_unit', default='min', type=str)
+    parser.add_argument('--repetition', default=5, type=int, 
+                        help="Repeat for this many times for each training_data_amount")
+    parser.add_argument('--n_classes', default=4, type=int)
+    parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
+    parser.add_argument('--batch_size', default=32, type=int)
+    parser.add_argument('--n_epochs', default=50, type=int)
+    parser.add_argument('--significance_level', default=0.95, type=float)
+
+    args = parser.parse_args()
+    with open(args.json, 'r') as f:
+        args_from_json = json.load(f)
+
+    # Use the dictionary to set the arguments
+    for key, value in args_from_json.items():
+        if hasattr(args, key):
+            setattr(args, key, value)
+
+    # print(args)
+
+    return args
+    

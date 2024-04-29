@@ -21,43 +21,40 @@ from sklearn.utils import compute_class_weight
 from skorch.helper import predefined_split
 from skorch.callbacks import EpochScoring
 
-from utils import get_subset, import_model, get_center_label
+from utils import get_subset, import_model, get_center_label, balanced_accuracy_multi, parse_training_config
 
 import warnings
 warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
-model_name = 'SleepStagerChambon2018'
+args = parse_training_config()
+model_name = args.model_name
 model_object = import_model(model_name)
-dataset_name = 'SleepPhysionet'
+dataset_name = args.dataset_name
 dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-# dataset = SleepPhysionet(subject_ids=[0, 1, 2,], recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=[0, 1,], recording_ids=[2,], crop_wake_mins=30)
 
 print('Data loaded')
 
-experiment_version = 4
+experiment_version = args.experiment_version
 results_file_name = f'{model_name}_{dataset_name}_from_scratch_{experiment_version}'
 dir_results = 'results/'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ----------------------------- Training parameters -----------------------------
-# Increment training set size by 'data_amount_step' each time
-data_amount_start = 100
-data_amount_step = 20
-# data_amount_step = 400 # for testing purpose use super big data_amount_step
-# Repeat for 'repetition' times for each training_data_amount
-repetition = 3
-# 'n_classes' class classification task
-n_classes = 5
-# learning rate
-lr = 1e-3
-batch_size = 32
-n_epochs = 50
+# 
+data_amount_start = args.data_amount_start
+data_amount_step = args.data_amount_step
+repetition = args.repetition
+n_classes = args.n_classes
+lr = args.lr
+batch_size = args.batch_size
+n_epochs = args.n_epochs
 
 ### ----------------------------- Plotting parameters -----------------------------
-data_amount_unit = 'min'
-trial_len_sec = 30
+data_amount_unit = args.data_amount_unit
+trial_len_sec = args.trial_len_sec
 if data_amount_unit == 'trial':
     unit_multiplier = 1
 elif data_amount_unit == 'sec':
@@ -65,7 +62,7 @@ elif data_amount_unit == 'sec':
 elif data_amount_unit == 'min':
     unit_multiplier = trial_len_sec / 60
 
-significance_level = 0.95
+significance_level = args.significance_level
 
 ### ----------------------------- Preprocessing -----------------------------
 high_cut_hz = 30
@@ -102,6 +99,7 @@ windows_dataset = create_windows_from_events(
     trial_stop_offset_samples=0,
     window_size_samples=window_size_samples,
     window_stride_samples=window_size_samples,
+    picks="Fpz-Cz" if model_name == 'SleepStagerEldele2021' else None,
     preload=True,
     mapping=mapping
 )
@@ -109,10 +107,14 @@ windows_dataset = create_windows_from_events(
 preprocess(windows_dataset, [Preprocessor(standard_scale, channel_wise=True)])
 
 ### ----------------------------- Create model -----------------------------
+# Specify which GPU to run on to avoid collisions
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
+
 # check if GPU is available
 cuda = torch.cuda.is_available()  
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 if cuda:
+    print('CUDA is available')
     torch.backends.cudnn.benchmark = True
 set_random_seeds(seed=31, cuda=cuda)
 
@@ -141,8 +143,8 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
     test_sampler = SequenceSampler(
         test_set.get_metadata(), n_windows, n_windows_stride, randomize=True
     )
-    test_set.target_transform = get_center_label
-    y_test = [test_set[idx][1] for idx in test_sampler]
+    test_set.target_transform = get_center_label if model_name != 'USleep' else None
+    y_test = [test_set[idx][1] for idx in test_sampler] if model_name != 'USleep' else [test_set[idx][1][1] for idx in test_sampler]
     new_class_weights = compute_class_weight('balanced', classes=np.unique(y_test), y=y_test)
 
     # Only update class_weights if generated weights for all classes
@@ -163,32 +165,28 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
             train_sampler = SequenceSampler(
                 train_subset.get_metadata(), n_windows, n_windows_stride, randomize=True
             )
-            train_subset.target_transform = get_center_label
+            train_subset.target_transform = get_center_label if model_name != 'USleep' else None
 
-            # Balance for imbalanced class representation
-            # y_train = [train_subset[idx][1] for idx in train_sampler]
-            # class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-            # print(np.unique(y_train))
-            # print(class_weights)
-
-            # SleepStagerChambon2018
-            feat_extractor = model_object(
-                n_channels,
-                sfreq,
-                n_outputs=n_classes,
-                n_times=input_size_samples,
-                return_feats=True
+            # Create model
+            model_kwargs = args.model_kwargs
+            model = model_object(
+                n_chans = n_channels,
+                sfreq = sfreq,
+                n_outputs = n_classes,
+                n_times = input_size_samples,
+                **model_kwargs
             )
-            model = nn.Sequential(
-                # apply model on each 30-s window
-                TimeDistributed(feat_extractor),  
-                nn.Sequential(  
-                    # apply linear layer on concatenated feature vectors
-                    nn.Flatten(start_dim=1),
-                    nn.Dropout(0.5),
-                    nn.Linear(feat_extractor.len_last_layer * n_windows, n_classes)
+            if model_name != 'USleep':
+                model = nn.Sequential(
+                    # apply model on each 30-s window
+                    TimeDistributed(model),  
+                    nn.Sequential(  
+                        # apply linear layer on concatenated feature vectors
+                        nn.Flatten(start_dim=1),
+                        nn.Dropout(0.5),
+                        nn.Linear(model.len_last_layer * n_windows, n_classes)
+                    )
                 )
-            )
 
             # Send model to GPU
             if cuda:
@@ -196,19 +194,18 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
 
             print(f'Currently training for subject {subject_id} with {len(train_sampler)} sequences = {training_data_amount} trials (repetition {i})')
             
-            batch_size = int(min(32, training_data_amount // 2))
+            batch_size = int(min(args.batch_size, training_data_amount // 2))
             
             train_bal_acc = EpochScoring(
-                scoring='balanced_accuracy', on_train=True, name='train_bal_acc',
+                scoring=balanced_accuracy_multi, on_train=True, name='train_bal_acc',
                 lower_is_better=False)
             valid_bal_acc = EpochScoring(
-                scoring='balanced_accuracy', on_train=False, name='valid_bal_acc',
+                scoring=balanced_accuracy_multi, on_train=False, name='valid_bal_acc',
                 lower_is_better=False)
             callbacks = [
                 ('train_bal_acc', train_bal_acc),
                 ('valid_bal_acc', valid_bal_acc)
             ]
-
             clf = EEGClassifier(
                 model,
                 criterion=torch.nn.CrossEntropyLoss,
@@ -225,6 +222,9 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
                 device=device,
                 classes=np.unique(y_test),
             )
+            # Deactivate the default valid_acc callback. USleep wouldn't work without this line
+            clf.set_params(callbacks__valid_acc=None)
+            # Train model
             clf.fit(train_subset, y=None, epochs=n_epochs)
 
             # Get final accuracy
