@@ -13,7 +13,7 @@
     "n_classes": 5,
     "lr": 1e-3,
     "batch_size": 32,
-    "n_epochs": 5,
+    "n_epochs": 50,
     "data_amount_unit": "min",
     "trial_len_sec": 30,
     "significance_level": 0.95
