@@ -31,9 +31,9 @@ args = parse_training_config()
 model_name = args.model_name
 model_object = import_model(model_name)
 dataset_name = args.dataset_name
-dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-# dataset = SleepPhysionet(subject_ids=[0, 1,], recording_ids=[2,], crop_wake_mins=30)
+dataset = SleepPhysionet(subject_ids=[0, 1,], recording_ids=[2,], crop_wake_mins=30)
 
 print('Data loaded')
 
