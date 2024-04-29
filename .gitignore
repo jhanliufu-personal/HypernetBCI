@@ -6,6 +6,15 @@ __pycache__/
 # C extensions
 *.so
 
+# Ignore results
+results/
+
+# Ignore data
+data/
+
+# Ignore jupyter notebooks
+notebooks/
+
 # Distribution / packaging
 .Python
 build/

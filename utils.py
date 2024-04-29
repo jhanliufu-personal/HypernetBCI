@@ -124,6 +124,14 @@ def balanced_accuracy_multi(model, X, y):
     return balanced_accuracy_score(y.flatten(), y_pred.flatten())
 
 
+def clf_predict_on_set(clf, dataset):
+    predicted_labels = clf.predict(dataset)
+    true_labels = np.array(dataset.get_metadata().target)
+    predicted_correct = np.equal(predicted_labels, true_labels)
+    prediction_acc = np.sum(predicted_correct) / len(predicted_correct)
+    return prediction_acc
+
+
 def parse_training_config():
     parser = argparse.ArgumentParser(description='HypernetBCI Training and Testing')
     parser.add_argument('--json', default=None, type=str, help='Path to JSON configuration file')
@@ -138,6 +146,7 @@ def parse_training_config():
                             For testing purpose use super big data_amount_step')
     parser.add_argument('--trial_len_sec', default=30, type=float)
     parser.add_argument('--data_amount_unit', default='min', type=str)
+    parser.add_argument('--only_pretrain', default=False, type=bool, help='If only_pretrain, the finetune step is skipped')
     parser.add_argument('--repetition', default=5, type=int, 
                         help="Repeat for this many times for each training_data_amount")
     parser.add_argument('--n_classes', default=4, type=int)
@@ -145,6 +154,8 @@ def parse_training_config():
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--n_epochs', default=50, type=int)
     parser.add_argument('--significance_level', default=0.95, type=float)
+    parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')
+    parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
 
     args = parser.parse_args()
     with open(args.json, 'r') as f:

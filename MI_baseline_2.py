@@ -28,7 +28,7 @@ import os
 import pickle
 import numpy as np
 
-from utils import get_subset, import_model
+from utils import get_subset, import_model, clf_predict_on_set
 
 ### ----------------------------- Experiment parameters -----------------------------
 model_name = 'ShallowFBCSPNet'
@@ -242,10 +242,11 @@ for holdout_subj_id in subject_ids_lst:
     ### ------------------------------
 
     ### Baseline accuracy on the finetune_valid set
-    finetune_valid_predicted = cur_clf.predict(finetune_subj_valid_set)
-    finetune_valid_true = np.array(finetune_subj_valid_set.get_metadata().target)
-    finetune_baseline_correct = np.equal(finetune_valid_predicted, finetune_valid_true)
-    finetune_baseline_acc = np.sum(finetune_baseline_correct) / len(finetune_baseline_correct)
+    # finetune_valid_predicted = cur_clf.predict(finetune_subj_valid_set)
+    # finetune_valid_true = np.array(finetune_subj_valid_set.get_metadata().target)
+    # finetune_baseline_correct = np.equal(finetune_valid_predicted, finetune_valid_true)
+    # finetune_baseline_acc = np.sum(finetune_baseline_correct) / len(finetune_baseline_correct)
+    finetune_baseline_acc = clf_predict_on_set(cur_clf, finetune_subj_valid_set)
     print(f'Before finetuning for subject {holdout_subj_id}, the baseline accuracy is {finetune_baseline_acc}')
 
     ### ---------- Fine tuning ----------

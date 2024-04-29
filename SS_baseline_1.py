@@ -31,9 +31,9 @@ args = parse_training_config()
 model_name = args.model_name
 model_object = import_model(model_name)
 dataset_name = args.dataset_name
-dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
+# dataset = SleepPhysionet(subject_ids=range(79), recording_ids=[1, 2,], crop_wake_mins=30)
 # Test with a few subjects first
-# dataset = SleepPhysionet(subject_ids=[0, 1,], recording_ids=[2,], crop_wake_mins=30)
+dataset = SleepPhysionet(subject_ids=[0, 1,], recording_ids=[2,], crop_wake_mins=30)
 
 print('Data loaded')
 
@@ -43,7 +43,6 @@ dir_results = 'results/'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
 ### ----------------------------- Training parameters -----------------------------
-# 
 data_amount_start = args.data_amount_start
 data_amount_step = args.data_amount_step
 repetition = args.repetition
@@ -159,7 +158,7 @@ for subject_id, subject_dataset in windows_dataset.split('subject').items():
         for i in range(repetition):
             
             # Get subset of train set
-            print(f'training_data_amount={training_data_amount}, train_set_size={train_set_size}')
+            # print(f'training_data_amount={training_data_amount}, train_set_size={train_set_size}')
             train_subset = get_subset(train_set, target_trial_num=int(training_data_amount), random_sample=False)
             # Extract train sequences
             train_sampler = SequenceSampler(
