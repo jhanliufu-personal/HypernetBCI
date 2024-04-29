@@ -1,5 +1,5 @@
 {
-    "gpu_number": "0",
+    "gpu_number": "2",
     "model_name": "USleep",
     "dataset_name": "SleepPhysionet",
     "model_kwargs":
