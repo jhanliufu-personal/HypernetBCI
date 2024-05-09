@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
+subject_ids_lst = list(range(1, 3))
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -133,7 +133,7 @@ for holdout_subj_id in subject_ids_lst:
 
     ### ---------- Split pre-train set into pre-train-train set and pre-train-test set ----------
     ### THIS PART IS FOR BCNI2014001
-    if args.model_name == 'BCNI2014001':
+    if args.dataset_name == 'BCNI2014001':
         pre_train_train_set_lst = []
         pre_train_test_set_lst = []
         pre_train_test_set_size = 1 # runs
@@ -143,7 +143,7 @@ for holdout_subj_id in subject_ids_lst:
             pre_train_test_set_lst.extend(subj_splitted_lst_by_run[-pre_train_test_set_size:])
     
     ### THIS PART IS FOR SHCIRRMEISTER 2017
-    elif args.model_name == 'Schirrmeister2017':
+    elif args.dataset_name == 'Schirrmeister2017':
         pre_train_train_set_lst = []
         pre_train_test_set_lst = []
         for key, val in pre_train_set.split('subject').items():
@@ -211,12 +211,12 @@ for holdout_subj_id in subject_ids_lst:
 
     ### ---------- Split fine tune set into fine tune-train set and fine tune-valid set ----------
     ### THIS PART IS FOR BCNI2014001
-    if args.model_name == 'BCNI2014001':
+    if args.dataset_name == 'BCNI2014001':
         finetune_splitted_lst_by_run = list(fine_tune_set.split('run').values())
         finetune_subj_train_set = BaseConcatDataset(finetune_splitted_lst_by_run[:-1])
         finetune_subj_valid_set = BaseConcatDataset(finetune_splitted_lst_by_run[-1:])
     ### THIS PART IS FOR SHCIRRMEISTER 2017
-    elif args.model_name == 'Schirrmeister2017':
+    elif args.dataset_name == 'Schirrmeister2017':
         finetune_splitted_by_run = fine_tune_set.split('run')
         finetune_subj_train_set = finetune_splitted_by_run.get('0train')
         finetune_subj_valid_set = finetune_splitted_by_run.get('1test')
