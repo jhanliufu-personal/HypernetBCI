@@ -159,9 +159,9 @@ def parse_training_config():
     parser.add_argument('--significance_level', default=0.95, type=float)
     parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')
     parser.add_argument('--weight_decay', default=0, type=int)
-    parser.add_argument('--finetune_weight_decay', default=0, type=int)
+    parser.add_argument('--fine_tune_weight_decay', default=0, type=int)
     parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
-    parser.add_argument('--fine_tune_free_layer', default=None, type=list)
+    parser.add_argument('--fine_tune_freeze_layer', default=None, type=list)
 
     args = parser.parse_args()
     with open(args.json, 'r') as f:
