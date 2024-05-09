@@ -21,7 +21,11 @@ from sklearn.utils import compute_class_weight
 from skorch.helper import predefined_split
 from skorch.callbacks import EpochScoring
 
-from utils import get_subset, import_model, get_center_label, balanced_accuracy_multi, parse_training_config, clf_predict_on_set
+from utils import (
+    get_subset, import_model, get_center_label, 
+    balanced_accuracy_multi, parse_training_config, 
+    freeze_all_param_but, clf_predict_on_set, freeze_param
+)
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -226,6 +230,8 @@ for holdout_subj_id in subject_ids_lst:
 
     # check if a pretrained model exists
     model_exist = True
+    # Shouldn't have hard coded this
+    temp_exp_name = 'baseline_2_5_pretrain'
     for file_end in ['_model.pkl', '_opt.pkl', '_history.json']:
         cur_file_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}{file_end}')
         model_exist = model_exist and os.path.exists(cur_file_path) and os.path.getsize(cur_file_path) > 0
@@ -337,11 +343,23 @@ for holdout_subj_id in subject_ids_lst:
             )
             fine_tune_clf.initialize()
 
+            # Shouldn't have hard coded this
+            temp_exp_name = 'baseline_2_5_pretrain'
             # Load pretrained model
             fine_tune_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
                             f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                             f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
             
+            ## Freeze layers
+            if args.freeze_most_layers:
+                if args.fine_tune_freeze_layers_but is not None:
+                    freeze_all_param_but(fine_tune_clf.module, args.fine_tune_freeze_layers_but)
+            else:
+                if args.fine_tune_freeze_layer is not None:
+                    for param_name in args.fine_tune_freeze_layer:
+                        print(f'Freezing parameter: {param_name}')
+                        freeze_param(fine_tune_clf.module, param_name)
+
             # Continue training / finetuning
             print(f'Fine tuning model for subject {holdout_subj_id} ' +
                   f'with {len(fine_tune_train_subset_sampler)} sequences ' +

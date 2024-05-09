@@ -153,15 +153,23 @@ def parse_training_config():
     parser.add_argument('--repetition', default=5, type=int, 
                         help="Repeat for this many times for each training_data_amount")
     parser.add_argument('--n_classes', default=4, type=int)
+
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
-    parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--n_epochs', default=50, type=int)
-    parser.add_argument('--significance_level', default=0.95, type=float)
     parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')
+
+    parser.add_argument('--batch_size', default=32, type=int)
+
+    parser.add_argument('--n_epochs', default=50, type=int)
+    parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
+
+    parser.add_argument('--significance_level', default=0.95, type=float)
+
     parser.add_argument('--weight_decay', default=0, type=int)
     parser.add_argument('--fine_tune_weight_decay', default=0, type=int)
-    parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
+    
     parser.add_argument('--fine_tune_freeze_layer', default=None, type=list)
+    parser.add_argument('--freeze_most_layers', default=False, type=bool)
+    parser.add_argument('--fine_tune_freeze_layers_but', default=None, type=list)
 
     args = parser.parse_args()
     with open(args.json, 'r') as f:
@@ -185,4 +193,15 @@ def freeze_param(module_obj, parameter_name):
     for t in parameter_name.split('.'):
         param = getattr(param, t)
     param.requires_grad = False
+
+
+def freeze_all_param_but(module_obj, parameter_name_lst):
+    """
+    Freeze all parameters of a model but the specified ones
+    """
+    for name, param in module_obj.named_parameters:
+        if name in parameter_name_lst:
+            continue
+        param.requires_grad = False
+
     
