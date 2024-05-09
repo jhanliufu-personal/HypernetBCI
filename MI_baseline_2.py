@@ -96,7 +96,10 @@ windows_dataset = create_windows_from_events(
     preload=True,
 )
 
-### ----------------------------- Model training -----------------------------
+### ----------------------------- Create model -----------------------------
+# Specify which GPU to run on to avoid collisions
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
+
 cuda = torch.cuda.is_available() 
 if cuda:
     print('CUDA available, use GPU for training')
@@ -108,6 +111,8 @@ else:
 
 seed = 20200220
 set_random_seeds(seed=seed, cuda=cuda)
+
+### ----------------------------- Training -----------------------------
 
 classes = list(range(args.n_classes))
 n_chans = windows_dataset[0][0].shape[0]
