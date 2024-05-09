@@ -168,7 +168,11 @@ for holdout_subj_id in subject_ids_lst:
             input_window_samples=input_window_samples,
             **(args.model_kwargs)
         )
-        
+    
+    # Send model to GPU
+    if cuda:
+        cur_model.cuda()
+
     cur_clf = EEGClassifier(
         cur_model,
         criterion=torch.nn.NLLLoss,
@@ -250,6 +254,10 @@ for holdout_subj_id in subject_ids_lst:
                 **(args.model_kwargs)
             )
     
+            # Send model to GPU
+            if cuda:
+                finetune_model.cuda()
+
             cur_finetune_batch_size = int(min(finetune_training_data_amount // 2, args.batch_size))
             
             new_clf = EEGClassifier(
