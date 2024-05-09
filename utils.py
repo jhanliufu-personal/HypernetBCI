@@ -133,6 +133,9 @@ def clf_predict_on_set(clf, dataset):
 
 
 def parse_training_config():
+    """
+    Parse arguments
+    """
     parser = argparse.ArgumentParser(description='HypernetBCI Training and Testing')
     parser.add_argument('--json', default=None, type=str, help='Path to JSON configuration file')
     parser.add_argument('--gpu_number', default='0', choices=range(4), type=str, help='BBQ cluster has 4 gpus')
@@ -155,7 +158,10 @@ def parse_training_config():
     parser.add_argument('--n_epochs', default=50, type=int)
     parser.add_argument('--significance_level', default=0.95, type=float)
     parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')
+    parser.add_argument('--weight_decay', default=0, type=int)
+    parser.add_argument('--finetune_weight_decay', default=0, type=int)
     parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
+    parser.add_argument('--fine_tune_free_layer', default=None, type=list)
 
     args = parser.parse_args()
     with open(args.json, 'r') as f:
@@ -169,4 +175,14 @@ def parse_training_config():
     # print(args)
 
     return args
+
+
+def freeze_param(module_obj, parameter_name):
+    """
+    Freeze the specified layer of a model
+    """
+    param = module_obj
+    for t in parameter_name.split('.'):
+        param = getattr(param, t)
+    param.requires_grad = False
     
