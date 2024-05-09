@@ -274,9 +274,10 @@ for holdout_subj_id in subject_ids_lst:
                                 f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
     
             ## Freeze specified layers
-            for param_name in args.fine_tune_free_layer:
-                print(f'Freezing parameter: {param_name}')
-                freeze_param(new_clf.module, param_name)
+            if args.fine_tune_free_layer is not None:
+                for param_name in args.fine_tune_free_layer:
+                    print(f'Freezing parameter: {param_name}')
+                    freeze_param(new_clf.module, param_name)
 
             ## Continue training / finetuning
             print(f'Fine tuning model for subject {holdout_subj_id} with {finetune_training_data_amount} = {len(cur_finetune_subj_train_subset)} trials (repetition {i})')
