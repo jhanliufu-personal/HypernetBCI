@@ -22,8 +22,7 @@
     "fine_tune_freeze_layer":
         ["conv_time_spat.conv_time.weight", 
          "conv_time_spat.conv_time.bias", 
-         "conv_time_spat.conv_spat.weight", 
-         "conv_time_spat.conv_spat.bias"],
+         "conv_time_spat.conv_spat.weight"],
     "data_amount_unit": "min",
     "trial_len_sec": 4,
     "significance_level": 0.95
