@@ -3,7 +3,7 @@
     "model_name": "ShallowFBCSPNet",
     "dataset_name": "Schirrmeister2017",
     "experiment_version": 6,
-    "only_pretrain": false,
+    "only_pretrain": true,
     "model_kwargs":
     {
         "final_conv_length": "auto"

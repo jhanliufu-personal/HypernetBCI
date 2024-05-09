@@ -201,8 +201,8 @@ for holdout_subj_id in subject_ids_lst:
                             f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                             f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
 
-    # if test_pretrain:
-    #     continue
+    if args.only_pretrain:
+        continue
 
     ### ---------- Split fine tune set into fine tune-train set and fine tune-valid set ----------
     ### THIS PART IS FOR BCNI2014001
