@@ -15,7 +15,7 @@
     "lr": 1e-3,
     "fine_tune_lr": 1e-3,
     "batch_size": 32,
-    "n_epochs": 50,
+    "n_epochs": 40,
     "fine_tune_n_epochs": 20,
     "data_amount_unit": "min",
     "trial_len_sec": 30,
