@@ -261,7 +261,7 @@ for holdout_subj_id in subject_ids_lst:
                 optimizer__weight_decay=args.fine_tune_weight_decay,
                 batch_size=cur_finetune_batch_size,
                 callbacks=[
-                    "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=args.finetune_n_epochs - 1)),
+                    "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=args.fine_tune_n_epochs - 1)),
                 ],
                 device=device,
                 classes=classes,
@@ -269,6 +269,8 @@ for holdout_subj_id in subject_ids_lst:
             new_clf.initialize()
             
             ## Load pretrained model
+            # shouldn't have har coded it. Need to think of a way to use pretrained models from other experiment
+            temp_exp_name = 'baseline_2_6_pretrain'
             new_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
                                 f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                                 f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
