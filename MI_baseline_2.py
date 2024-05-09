@@ -240,7 +240,7 @@ for holdout_subj_id in subject_ids_lst:
                 n_chans,
                 args.n_classes,
                 input_window_samples=input_window_samples,
-                final_conv_length='auto',
+                **(args.model_kwargs)
             )
     
             cur_finetune_batch_size = int(min(finetune_training_data_amount // 2, args.batch_size))
