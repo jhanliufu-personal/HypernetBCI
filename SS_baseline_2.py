@@ -353,6 +353,7 @@ for holdout_subj_id in subject_ids_lst:
             ## Freeze layers
             if args.freeze_most_layers:
                 if args.fine_tune_freeze_layers_but is not None:
+                    print(f'Freezing all parameters but {args.fine_tune_freeze_layers_but}')
                     freeze_all_param_but(fine_tune_clf.module, args.fine_tune_freeze_layers_but)
             else:
                 if args.fine_tune_freeze_layer is not None:

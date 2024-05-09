@@ -2,7 +2,7 @@
     "gpu_number": "2",
     "model_name": "SleepStagerChambon2018",
     "dataset_name": "SleepPhysionet",
-    "experiment_version": 6,
+    "experiment_version": 12,
     "only_pretrain": false,
     "model_kwargs":
     {
