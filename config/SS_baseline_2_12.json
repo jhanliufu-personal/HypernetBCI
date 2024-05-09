@@ -10,7 +10,7 @@
     },
     "data_amount_start": 100,
     "data_amount_step": 40,
-    "repetition": 3, 
+    "repetition": 1, 
     "n_classes": 5,
     "lr": 1e-3,
     "fine_tune_lr": 1e-3,
