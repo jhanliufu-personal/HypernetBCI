@@ -9,17 +9,17 @@
         "final_conv_length": "auto"
     },
     "data_amount_start": 0,
-    "data_amount_step": 40,
-    "repetition": 3, 
+    "data_amount_step": 200,
+    "repetition": 1, 
     "n_classes": 4,
     "lr": 0.065e-2,
     "fine_tune_lr": 0.065e-2,
     "batch_size": 64,
     "n_epochs": 30,
-    "fine_tune_n_epochs": 20,
+    "fine_tune_n_epochs": 3,
     "weight_decay": 0,
-    "finetune_weight_decay": 0,
-    "fine_tune_free_layer":
+    "fine_tune_weight_decay": 0,
+    "fine_tune_freeze_layer":
         ["conv_time_spat.conv_time.weight", 
          "conv_time_spat.conv_time.bias", 
          "conv_time_spat.conv_spat.weight", 

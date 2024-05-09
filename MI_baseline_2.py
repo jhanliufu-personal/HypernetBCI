@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
+subject_ids_lst = list(range(1, 3))
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -257,8 +257,8 @@ for holdout_subj_id in subject_ids_lst:
                 criterion=torch.nn.NLLLoss,
                 optimizer=torch.optim.AdamW,
                 train_split=predefined_split(finetune_subj_valid_set), 
-                optimizer__lr=args.finetune_lr,
-                optimizer__weight_decay=args.finetune_weight_decay,
+                optimizer__lr=args.fine_tune_lr,
+                optimizer__weight_decay=args.fine_tune_weight_decay,
                 batch_size=cur_finetune_batch_size,
                 callbacks=[
                     "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=args.finetune_n_epochs - 1)),
@@ -274,14 +274,14 @@ for holdout_subj_id in subject_ids_lst:
                                 f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
     
             ## Freeze specified layers
-            if args.fine_tune_free_layer is not None:
-                for param_name in args.fine_tune_free_layer:
+            if args.fine_tune_freeze_layer is not None:
+                for param_name in args.fine_tune_freeze_layer:
                     print(f'Freezing parameter: {param_name}')
                     freeze_param(new_clf.module, param_name)
 
             ## Continue training / finetuning
             print(f'Fine tuning model for subject {holdout_subj_id} with {finetune_training_data_amount} = {len(cur_finetune_subj_train_subset)} trials (repetition {i})')
-            _ = new_clf.partial_fit(cur_finetune_subj_train_subset, y=None, epochs=args.finetune_n_epochs)
+            _ = new_clf.partial_fit(cur_finetune_subj_train_subset, y=None, epochs=args.fine_tune_n_epochs)
     
             ## Get results after fine tuning
             df = pd.DataFrame(new_clf.history[:, results_columns], columns=results_columns,)
