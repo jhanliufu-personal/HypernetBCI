@@ -9,7 +9,7 @@
         "return_feats": true
     },
     "data_amount_start": 100,
-    "data_amount_step": 40,
+    "data_amount_step": 20,
     "repetition": 1, 
     "n_classes": 5,
     "lr": 1e-3,
