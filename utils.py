@@ -199,7 +199,7 @@ def freeze_all_param_but(module_obj, parameter_name_lst):
     """
     Freeze all parameters of a model but the specified ones
     """
-    for name, param in module_obj.named_parameters:
+    for name, param in module_obj.named_parameters():
         if name in parameter_name_lst:
             continue
         param.requires_grad = False
