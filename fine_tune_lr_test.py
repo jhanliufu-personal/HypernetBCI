@@ -32,6 +32,7 @@ print('Data loaded')
 results_file_name = f'{args.model_name}_{args.dataset_name}_finetune_lr_{args.experiment_version}'
 dir_results = 'results/'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
+fig_path = os.path.join(dir_results, f'{results_file_name}.png')
 
 ### ----------------------------- Preprocessing -----------------------------
 low_cut_hz = 4.  
@@ -164,3 +165,9 @@ for holdout_subj_id in subject_ids_lst:
         # save the updated one
         with open(file_path, 'wb') as f:
             pickle.dump(dict_results, f)
+
+for lr, df in dict_results.items():
+    truncated_df = df.iloc[-(args.n_epochs):]
+    plt.plot(truncated_df.index, truncated_df.valid_accuracy, label=f'lr={lr:.6f}')
+plt.legend()
+plt.savefig(fig_path)
