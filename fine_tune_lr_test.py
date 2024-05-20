@@ -17,7 +17,7 @@ import os
 import pickle
 import numpy as np
 
-from utils import get_subset, import_model, clf_predict_on_set, parse_training_config, freeze_param
+from utils import get_subset, import_model, parse_training_config, freeze_param
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -32,14 +32,6 @@ print('Data loaded')
 results_file_name = f'{args.model_name}_{args.dataset_name}_finetune_{args.experiment_version}'
 dir_results = 'results/'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
-
-# ### ----------------------------- Plotting parameters -----------------------------
-# if args.data_amount_unit == 'trial':
-#     unit_multiplier = 1
-# elif args.data_amount_unit == 'sec':
-#     unit_multiplier = args.trial_len_sec
-# elif args.data_amount_unit == 'min':
-#     unit_multiplier = args.trial_len_sec / 60
 
 ### ----------------------------- Preprocessing -----------------------------
 low_cut_hz = 4.  
@@ -116,18 +108,21 @@ for holdout_subj_id in subject_ids_lst:
     finetune_subj_train_set = finetune_splitted_by_run.get('0train')
     finetune_subj_valid_set = finetune_splitted_by_run.get('1test')
 
-    cur_model = model_object(
+    # Get a subset of train set for fine tuning
+    finetune_subj_train_set = get_subset(finetune_subj_train_set, 500, random_sample=True)
+
+    for cur_lr in lr_arr:
+
+        cur_model = model_object(
             n_chans,
             args.n_classes,
             input_window_samples=input_window_samples,
             **(args.model_kwargs)
         )
-    
-    # Send model to GPU
-    if cuda:
-        cur_model.cuda()
-
-    for cur_lr in lr_arr:
+        
+        # Send model to GPU
+        if cuda:
+            cur_model.cuda()
 
         cur_clf = EEGClassifier(
             cur_model,
@@ -161,3 +156,11 @@ for holdout_subj_id in subject_ids_lst:
                           index=cur_clf.history[:, 'epoch'])
         
         dict_results.update({cur_lr: df})
+
+        ### ----------------------------- Save results -----------------------------
+        # remove existing results file if one exists
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        # save the updated one
+        with open(file_path, 'wb') as f:
+            pickle.dump(dict_results, f)
