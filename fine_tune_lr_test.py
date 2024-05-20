@@ -101,7 +101,9 @@ splitted_by_subj = windows_dataset.split('subject')
 
 dict_results = {}
 results_columns = ['valid_accuracy',]
-lr_arr = np.arange(1, 100, 10) * (0.065e-4)
+num = 5
+stop = -4
+lr_arr = np.logspace(start=stop - num + 1, stop=stop, num=num) * 6.5
 # for this purpose, only use one subject
 for holdout_subj_id in subject_ids_lst:
     fine_tune_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
