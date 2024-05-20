@@ -123,9 +123,9 @@ for holdout_subj_id in subject_ids_lst:
             **(args.model_kwargs)
         )
         
-        # Send model to GPU
-        if cuda:
-            cur_model.cuda()
+        # # Send model to GPU
+        # if cuda:
+        #     cur_model.cuda()
 
         cur_clf = EEGClassifier(
             cur_model,
@@ -156,6 +156,10 @@ for holdout_subj_id in subject_ids_lst:
 
         # Set learning rate again to make sure it's right
         cur_clf.optimizer__lr = cur_lr
+
+        # Send model to GPU
+        if cuda:
+            cur_model.cuda()
 
         # Fine tune
         print(f'Fine tuning model for subject {holdout_subj_id} with learning rate {cur_lr} = {cur_clf.optimizer__lr}')
