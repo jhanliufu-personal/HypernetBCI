@@ -289,17 +289,21 @@ for holdout_subj_id in subject_ids_lst:
                     print(f'Freezing parameter: {param_name}')
                     freeze_param(new_clf.module, param_name)
 
+            # Set learning rate again to make sure it's right
+            new_clf.optimizer__lr = args.fine_tune_lr
+
             ## Continue training / finetuning
-            print(f'Fine tuning model for subject {holdout_subj_id} with {finetune_training_data_amount} = {len(cur_finetune_subj_train_subset)} trials (repetition {i})')
+            print(f'Fine tuning model for subject {holdout_subj_id} with {len(cur_finetune_subj_train_subset)} trials (repetition {i}) with lr = {new_clf.optimizer__lr:.5f}')
             _ = new_clf.partial_fit(cur_finetune_subj_train_subset, y=None, epochs=args.fine_tune_n_epochs)
     
             ## Get results after fine tuning
             df = pd.DataFrame(new_clf.history[:, results_columns], columns=results_columns,)
     
-            cur_final_acc = np.mean(df.tail(5).valid_accuracy)
-            final_accuracy.append(cur_final_acc)
+            # cur_final_acc = np.mean(df.tail(5).valid_accuracy)
+            # final_accuracy.append(cur_final_acc)
         
-        dict_subj_results.update({finetune_training_data_amount: final_accuracy})
+        # dict_subj_results.update({finetune_training_data_amount: final_accuracy})
+        dict_subj_results.update({finetune_training_data_amount: df})
 
     dict_results.update({holdout_subj_id: dict_subj_results})
     ### ----------------------------- Save results -----------------------------
@@ -319,30 +323,30 @@ if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
 else:
     print(f"Error: File '{file_path}' does not exist or is empty. The save was insuccesful")
 
-### ----------------------------- Plot results -----------------------------
-df_results = pd.DataFrame(dict_results)
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
+# ### ----------------------------- Plot results -----------------------------
+# df_results = pd.DataFrame(dict_results)
+# fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
 
-for col in df_results.columns:
-    y_values = [np.mean(lst) for lst in df_results[col]]
-    y_errors = [np.std(lst) for lst in df_results[col]]
-    ax1.errorbar(df_results.index * unit_multiplier, y_values, yerr=y_errors, label=f'Subject {col}')
-    ax2.plot(df_results.index * unit_multiplier, y_values, label=f'Subject {col}')
+# for col in df_results.columns:
+#     y_values = [np.mean(lst) for lst in df_results[col]]
+#     y_errors = [np.std(lst) for lst in df_results[col]]
+#     ax1.errorbar(df_results.index * unit_multiplier, y_values, yerr=y_errors, label=f'Subject {col}')
+#     ax2.plot(df_results.index * unit_multiplier, y_values, label=f'Subject {col}')
 
-df_results_rep_avg = df_results.applymap(lambda x: np.mean(x))
-subject_averaged_df = df_results_rep_avg.mean(axis=1)
-std_err_df = df_results_rep_avg.sem(axis=1)
-conf_interval_df = stats.t.interval(args.significance_level, len(df_results_rep_avg.columns) - 1, 
-                                    loc=subject_averaged_df, scale=std_err_df)
+# df_results_rep_avg = df_results.applymap(lambda x: np.mean(x))
+# subject_averaged_df = df_results_rep_avg.mean(axis=1)
+# std_err_df = df_results_rep_avg.sem(axis=1)
+# conf_interval_df = stats.t.interval(args.significance_level, len(df_results_rep_avg.columns) - 1, 
+#                                     loc=subject_averaged_df, scale=std_err_df)
 
-ax3.plot(subject_averaged_df.index * unit_multiplier, subject_averaged_df, label='Subject averaged')
-ax3.fill_between(subject_averaged_df.index * unit_multiplier, conf_interval_df[0], conf_interval_df[1], 
-                 color='b', alpha=0.3, label=f'{args.significance_level*100}% CI')
+# ax3.plot(subject_averaged_df.index * unit_multiplier, subject_averaged_df, label='Subject averaged')
+# ax3.fill_between(subject_averaged_df.index * unit_multiplier, conf_interval_df[0], conf_interval_df[1], 
+#                  color='b', alpha=0.3, label=f'{args.significance_level*100}% CI')
 
-for ax in [ax1, ax2, ax3]:
-    ax.legend()
-    ax.set_xlabel(f'Fine tune data amount ({args.data_amount_unit})')
-    ax.set_ylabel('Accuracy')
+# for ax in [ax1, ax2, ax3]:
+#     ax.legend()
+#     ax.set_xlabel(f'Fine tune data amount ({args.data_amount_unit})')
+#     ax.set_ylabel('Accuracy')
 
-plt.suptitle(f'{args.model_name} on {args.dataset_name} Dataset \n fine tune model for each subject, {args.repetition} reps each point')
-plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))
+# plt.suptitle(f'{args.model_name} on {args.dataset_name} Dataset \n fine tune model for each subject, {args.repetition} reps each point')
+# plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))

@@ -153,7 +153,7 @@ for holdout_subj_id in subject_ids_lst:
                 freeze_param(cur_clf.module, param_name)
 
         # Set learning rate again to make sure it's right
-        cur_clf.optimizer__lr = cur_lr
+        # cur_clf.optimizer__lr = cur_lr
 
         # Fine tune
         print(f'Fine tuning model for subject {holdout_subj_id} with learning rate {cur_lr} = {cur_clf.optimizer__lr}')
