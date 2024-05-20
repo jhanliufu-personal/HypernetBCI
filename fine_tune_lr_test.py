@@ -29,7 +29,7 @@ subject_ids_lst = [2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 print('Data loaded')
 
-results_file_name = f'{args.model_name}_{args.dataset_name}_finetune_{args.experiment_version}'
+results_file_name = f'{args.model_name}_{args.dataset_name}_finetune_lr_{args.experiment_version}'
 dir_results = 'results/'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
 
@@ -100,7 +100,7 @@ splitted_by_subj = windows_dataset.split('subject')
 
 dict_results = {}
 results_columns = ['valid_accuracy',]
-lr_arr = np.arange(1, 10) * (0.065e-3)
+lr_arr = np.arange(1, 100, 10) * (0.065e-4)
 # for this purpose, only use one subject
 for holdout_subj_id in subject_ids_lst:
     fine_tune_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
