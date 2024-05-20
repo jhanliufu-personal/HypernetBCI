@@ -2,7 +2,7 @@
     "gpu_number": "0",
     "model_name": "ShallowFBCSPNet",
     "dataset_name": "Schirrmeister2017",
-    "experiment_version": 2,
+    "experiment_version": 3,
     "model_kwargs":
     {
         "final_conv_length": "auto"
@@ -11,5 +11,10 @@
     "n_classes": 4,
     "batch_size": 64,
     "n_epochs": 20,
-    "weight_decay": 0
+    "weight_decay": 0,
+    "fine_tune_freeze_layer":
+        ["conv_time_spat.conv_time.weight", 
+         "conv_time_spat.conv_time.bias", 
+         "final_layer.conv_classifier.weight",
+         "final_layer.conv_classifier.bias"]
 }

@@ -146,6 +146,12 @@ for holdout_subj_id in subject_ids_lst:
                             f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                             f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
         
+        ## Freeze specified layers
+        if args.fine_tune_freeze_layer is not None:
+            for param_name in args.fine_tune_freeze_layer:
+                print(f'Freezing parameter: {param_name}')
+                freeze_param(cur_clf.module, param_name)
+
         # Set learning rate again to make sure it's right
         cur_clf.optimizer__lr = cur_lr
 
