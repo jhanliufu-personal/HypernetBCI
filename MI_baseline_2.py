@@ -46,6 +46,7 @@ dir_results = 'results/'
 # used to store pre-trained model parameters
 temp_exp_name = f'baseline_2_{args.experiment_version}_pretrain'
 file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
+print(f'Saving results at {file_path}')
 
 ### ----------------------------- Plotting parameters -----------------------------
 if args.data_amount_unit == 'trial':
@@ -303,7 +304,7 @@ for holdout_subj_id in subject_ids_lst:
             # final_accuracy.append(cur_final_acc)
         
         # dict_subj_results.update({finetune_training_data_amount: final_accuracy})
-        dict_subj_results.update({finetune_training_data_amount: df})
+        dict_subj_results.update({finetune_training_data_amount: df.iloc[-args.fine_tune_n_epochs:]})
 
     dict_results.update({holdout_subj_id: dict_subj_results})
     ### ----------------------------- Save results -----------------------------
