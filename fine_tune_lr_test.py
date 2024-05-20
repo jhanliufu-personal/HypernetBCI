@@ -140,7 +140,7 @@ for holdout_subj_id in subject_ids_lst:
         )
         cur_clf.initialize()
 
-        temp_exp_name = f'baseline_2_6_pretrain_without_subj_{holdout_subj_id}'
+        temp_exp_name = f'baseline_2_6_pretrain'
         cur_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
                             f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
                             f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
