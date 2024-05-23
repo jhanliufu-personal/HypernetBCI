@@ -101,9 +101,14 @@ splitted_by_subj = windows_dataset.split('subject')
 
 dict_results = {}
 results_columns = ['valid_accuracy',]
-num = 5
-stop = -4
-lr_arr = np.logspace(start=stop - num + 1, stop=stop, num=num) * 6.5
+
+# Define the start and stop values
+start_value = 0.065e-4
+stop_value = 0.065e-2
+num_values = 10
+step = (stop_value - start_value) / (num_values - 1)
+lr_arr = np.arange(start_value, stop_value + step, step)
+
 # for this purpose, only use one subject
 for holdout_subj_id in subject_ids_lst:
     fine_tune_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
@@ -112,7 +117,7 @@ for holdout_subj_id in subject_ids_lst:
     finetune_subj_valid_set = finetune_splitted_by_run.get('1test')
 
     # Get a subset of train set for fine tuning
-    finetune_subj_train_set = get_subset(finetune_subj_train_set, 500, random_sample=True)
+    finetune_subj_train_set = get_subset(finetune_subj_train_set, 600, random_sample=True)
 
     for cur_lr in lr_arr:
 
@@ -123,9 +128,9 @@ for holdout_subj_id in subject_ids_lst:
             **(args.model_kwargs)
         )
         
-        # # Send model to GPU
-        # if cuda:
-        #     cur_model.cuda()
+        # Send model to GPU
+        if cuda:
+            cur_model.cuda()
 
         cur_clf = EEGClassifier(
             cur_model,
@@ -144,9 +149,11 @@ for holdout_subj_id in subject_ids_lst:
         cur_clf.initialize()
 
         temp_exp_name = f'baseline_2_6_pretrain'
-        cur_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
-                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
-                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+        cur_clf.load_params(
+            f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+            # f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+            # f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json')
+        )
         
         ## Freeze specified layers
         if args.fine_tune_freeze_layer is not None:
@@ -155,7 +162,7 @@ for holdout_subj_id in subject_ids_lst:
                 freeze_param(cur_clf.module, param_name)
 
         # Set learning rate again to make sure it's right
-        cur_clf.optimizer__lr = cur_lr
+        # cur_clf.optimizer__lr = cur_lr
 
         # Send model to GPU
         if cuda:
