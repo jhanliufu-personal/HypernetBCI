@@ -239,9 +239,11 @@ for holdout_subj_id in subject_ids_lst:
     if model_exist:
         ### Load trained model
         print(f'A pre-trained model for holdout subject {holdout_subj_id} exists')
-        pre_train_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
-                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
-                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+        pre_train_clf.load_params(
+            f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+            # f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+            # f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json')
+        )
     else:
         ### ---------- Pre-training ----------
         print(f'Currently pre-training model with data from all subjects {len(pre_train_train_sampler)} ' + 
@@ -250,9 +252,11 @@ for holdout_subj_id in subject_ids_lst:
         # Deactivate the default valid_acc callback. USleep wouldn't work without this line
         pre_train_clf.set_params(callbacks__valid_acc=None)
         _ = pre_train_clf.fit(pre_train_train_set, y=None, epochs=n_epochs)
-        pre_train_clf.save_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
-                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
-                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+        pre_train_clf.save_params(
+            f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json')
+        )
         
     if args.only_pretrain:
         continue
@@ -346,9 +350,11 @@ for holdout_subj_id in subject_ids_lst:
             # Shouldn't have hard coded this
             temp_exp_name = 'baseline_2_5_pretrain'
             # Load pretrained model
-            fine_tune_clf.load_params(f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
-                            f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
-                            f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json'))
+            fine_tune_clf.load_params(
+                f_params=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model.pkl'), 
+                # f_optimizer=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_opt.pkl'), 
+                # f_history=os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_history.json')
+            )
             
             ## Freeze layers
             if args.freeze_most_layers:
