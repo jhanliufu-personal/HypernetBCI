@@ -13,7 +13,7 @@
     "repetition": 3, 
     "n_classes": 4,
     "lr": 0.065e-2,
-    "fine_tune_lr": 0.65,
+    "fine_tune_lr": 0.065e-3,
     "batch_size": 64,
     "n_epochs": 30,
     "fine_tune_n_epochs": 20,
