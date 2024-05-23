@@ -36,7 +36,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
