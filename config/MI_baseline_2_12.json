@@ -1,8 +1,8 @@
 {
-    "gpu_number": "2",
+    "gpu_number": "0",
     "model_name": "ShallowFBCSPNet",
     "dataset_name": "Schirrmeister2017",
-    "experiment_version": 15,
+    "experiment_version": 12,
     "only_pretrain": false,
     "model_kwargs":
     {
@@ -10,15 +10,19 @@
     },
     "data_amount_start": 0,
     "data_amount_step": 40,
-    "repetition": 1, 
+    "repetition": 3, 
     "n_classes": 4,
     "lr": 0.065e-2,
-    "fine_tune_lr": 0.065e-2,
+    "fine_tune_lr": 0.065e-3,
     "batch_size": 64,
     "n_epochs": 30,
     "fine_tune_n_epochs": 20,
     "weight_decay": 0,
     "fine_tune_weight_decay": 0,
+    "fine_tune_freeze_layer":
+        ["conv_time_spat.conv_time.weight", 
+        "conv_time_spat.conv_time.bias", 
+        "conv_time_spat.conv_spat.weight"],
     "data_amount_unit": "min",
     "trial_len_sec": 4,
     "significance_level": 0.95
