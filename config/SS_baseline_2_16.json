@@ -1,8 +1,8 @@
 {
-    "gpu_number": "3",
+    "gpu_number": "0",
     "model_name": "SleepStagerChambon2018",
     "dataset_name": "SleepPhysionet",
-    "experiment_version": 15,
+    "experiment_version": 16,
     "only_pretrain": false,
     "model_kwargs":
     {
@@ -15,13 +15,10 @@
     "lr": 1e-3,
     "fine_tune_lr": 1e-4,
     "batch_size": 32,
-    "n_epochs": 40,
+    "n_epochs": 60,
     "fine_tune_n_epochs": 30,
     "data_amount_unit": "min",
     "trial_len_sec": 30,
     "significance_level": 0.95,
-    "freeze_most_layers": true, 
-    "fine_tune_freeze_layers_but":
-        ["1.2.weight", 
-         "1.2.bias"]
+    "freeze_most_layers": false
 }
