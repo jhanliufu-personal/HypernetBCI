@@ -8,6 +8,11 @@ import numpy as np
 import argparse
 import json
 
+import torch
+from tqdm import tqdm
+from torch.nn import Module
+from torch.optim.lr_scheduler import LRScheduler
+from torch.utils.data import DataLoader
 
 def generate_non_repeating_integers(x, y):
     # Check if y is greater than x
@@ -203,5 +208,87 @@ def freeze_all_param_but(module_obj, parameter_name_lst):
         if name in parameter_name_lst:
             continue
         param.requires_grad = False
+
+
+'''
+Define a method for training one epoch. Adapted from
+https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_pytorch_and_pytorch_lightning.html
+'''
+def train_one_epoch(
+        dataloader: DataLoader, model: Module, loss_fn, optimizer,
+        scheduler: LRScheduler, epoch: int, device="cuda", print_batch_stats=False
+):
+    model.train()  # Set the model to training mode
+    train_loss, correct = 0, 0
+
+    progress_bar = tqdm(enumerate(dataloader), total=len(dataloader),
+                        disable=not print_batch_stats)
+
+    for batch_idx, (X, y, _) in progress_bar:
+        X, y = X.to(device), y.to(device)
+        optimizer.zero_grad()
+        pred = model(X)
+        loss = loss_fn(pred, y)
+        loss.backward()
+        optimizer.step()  # update the model weights
+        optimizer.zero_grad()
+
+        train_loss += loss.item()
+        correct += (pred.argmax(1) == y).sum().item()
+
+        if print_batch_stats:
+            progress_bar.set_description(
+                # f"Epoch {epoch}/{n_epochs}, "
+                f"Epoch {epoch}, "
+                f"Batch {batch_idx + 1}/{len(dataloader)}, "
+                f"Loss: {loss.item():.6f}"
+            )
+
+    # Update the learning rate
+    scheduler.step()
+
+    correct /= len(dataloader.dataset)
+    return train_loss / len(dataloader), correct
+
+
+'''
+Evaluate model with no backprop. Adapted from
+https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_pytorch_and_pytorch_lightning.html
+'''
+@torch.no_grad()
+def test_model(
+    dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda"
+):
+    size = len(dataloader.dataset)
+    n_batches = len(dataloader)
+    model.eval()  # Switch to evaluation mode
+    test_loss, correct = 0, 0
+
+    if print_batch_stats:
+        progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    else:
+        progress_bar = enumerate(dataloader)
+
+    for batch_idx, (X, y, _) in progress_bar:
+        X, y = X.to(device), y.to(device)
+        pred = model(X)
+        batch_loss = loss_fn(pred, y).item()
+
+        test_loss += batch_loss
+        correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+        if print_batch_stats:
+            progress_bar.set_description(
+                f"Batch {batch_idx + 1}/{len(dataloader)}, "
+                f"Loss: {batch_loss:.6f}"
+            )
+
+    test_loss /= n_batches
+    correct /= size
+
+    print(
+        f"Test Accuracy: {100 * correct:.1f}%, Test Loss: {test_loss:.6f}\n"
+    )
+    return test_loss, correct
 
     

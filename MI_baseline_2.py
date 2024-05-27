@@ -192,7 +192,7 @@ for holdout_subj_id in subject_ids_lst:
     )
     cur_clf.initialize()
 
-    # shouldn't have har coded it. Need to think of a way to use pretrained models from other experiment
+    # shouldn't have har coded it. Need to think of a better way to use pretrained models from other experiment
     temp_exp_name = 'baseline_2_6_pretrain'
     # check if a pretrained model exists
     model_exist = True
