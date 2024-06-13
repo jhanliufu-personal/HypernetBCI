@@ -99,6 +99,10 @@ embedding_shape = torch.Size([1, 749])
 sample_shape = torch.Size([n_channels, input_window_samples])
 myHNBCI = HyperBCINet(model, embedding_shape, sample_shape)
 
+# Send myHNBCI to GPU
+if cuda:
+    myHNBCI.cuda()
+
 ### ----------------------------------- MODEL TRAINING -----------------------------------
 # these parameters work for the original ShallowFBSCP Net
 lr = 0.0625 * 0.01
