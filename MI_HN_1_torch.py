@@ -114,10 +114,17 @@ train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_set, batch_size=batch_size)
 
 optimizer = torch.optim.AdamW(
-    myHNBCI.parameters(),
+    model.parameters(),
     lr=lr, 
     weight_decay=weight_decay
 )
+
+# optimizer = torch.optim.AdamW(
+#     myHNBCI.parameters(),
+#     lr=lr, 
+#     weight_decay=weight_decay
+# )
+
 # optimizer = torch.optim.Adam(
 #     chain(
 #         myHNBCI.hypernet.parameters(), 
@@ -137,9 +144,30 @@ test_acc_lst = []
 for epoch in range(1, n_epochs + 1):
     print(f"Epoch {epoch}/{n_epochs}: ", end="")
 
+    # train_loss, train_accuracy = train_one_epoch(
+    #     train_loader, 
+    #     myHNBCI, 
+    #     loss_fn, 
+    #     optimizer, 
+    #     scheduler, 
+    #     epoch, 
+    #     device,
+    #     print_batch_stats=False
+    # )
+
+    # # Update weight tensor for each evaluation pass
+    # myHNBCI.calibrate()
+    # test_loss, test_accuracy = test_model(
+    #     test_loader, 
+    #     myHNBCI, 
+    #     loss_fn,
+    #     print_batch_stats=False
+    # )
+    # myHNBCI.calibrating = False
+
     train_loss, train_accuracy = train_one_epoch(
         train_loader, 
-        myHNBCI, 
+        model, 
         loss_fn, 
         optimizer, 
         scheduler, 
@@ -148,15 +176,12 @@ for epoch in range(1, n_epochs + 1):
         print_batch_stats=False
     )
 
-    # Update weight tensor for each evaluation pass
-    myHNBCI.calibrate()
     test_loss, test_accuracy = test_model(
         test_loader, 
-        myHNBCI, 
+        model, 
         loss_fn,
         print_batch_stats=False
     )
-    myHNBCI.calibrating = False
 
     print(
         f"Train Accuracy: {100 * train_accuracy:.2f}%, "
@@ -178,6 +203,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 1')
+plt.title('HypernetBCI sanity check 2')
 
-plt.savefig(f'{dir_results}HN_sanity_test_1.png')
+plt.savefig(f'{dir_results}HN_sanity_test_2.png')
