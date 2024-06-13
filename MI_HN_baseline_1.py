@@ -1,6 +1,11 @@
 '''
-baseline 1 refers to experiments that test the "train from scratch" approach.
-Model is trained from scratch for each subject.
+HN baseline 1 refers to experiments that train HypernetBCI from scratch for
+each subject. The direct comparison would be this and MI_baseline_1, which
+trains the model (no hypernet and weight generation) from scratch for each
+subject.
+
+One possible hypothesis is that adding Hypernet on top of the original model
+increases / decreases the amount of data needed to train from scratch.
 '''
 
 import matplotlib.pyplot as plt
@@ -12,57 +17,40 @@ from braindecode.preprocessing import (Preprocessor,
 from braindecode.preprocessing import create_windows_from_events
 import torch
 from braindecode.util import set_random_seeds
-from skorch.callbacks import LRScheduler
-from skorch.helper import predefined_split
-from braindecode import EEGClassifier
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats
 import os
 import pickle
 import numpy as np
+from torch.utils.data import DataLoader
+from models.HypernetBCI import HyperBCINet
 
-from utils import get_subset, import_model
+from utils import (
+    get_subset, import_model, train_one_epoch, test_model, parse_training_config
+)
 
 ### ----------------------------- Experiment parameters -----------------------------
-model_name = 'ShallowFBCSPNet'
-model_object = import_model(model_name)
-
-dataset_name = 'Schirrmeister2017'
+args = parse_training_config()
+model_object = import_model(args.model_name)
 subject_ids_lst = list(range(1, 14))
-dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=subject_ids_lst)
+dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
 
-experiment_version = 3
-results_file_name = f'{model_name}_{dataset_name}_from_scratch_{experiment_version}'
+results_file_name = f'HYPER{args.model_name}_{args.dataset_name}_from_scratch_{args.experiment_version}'
 dir_results = 'results/'
 
-### ----------------------------- Training parameters -----------------------------
-# Increment training set size by 'data_amount_step' each time
-data_amount_step = 20
-# Repeat training with a certain training set size for 'repetition' times
-repetition = 10
-# 'n_classes' class classification task
-n_classes = 4
-# learning rate
-lr = 0.0625 * 0.01
-weight_decay = 0
-batch_size = 64
-# training epochs
-n_epochs = 40
-
 ### ----------------------------- Plotting parameters -----------------------------
-data_amount_unit = 'min'
-trial_len_sec = 4
-if data_amount_unit == 'trial':
-    unit_multiplier = 1
-elif data_amount_unit == 'sec':
-    unit_multiplier = trial_len_sec
-elif data_amount_unit == 'min':
-    unit_multiplier = trial_len_sec / 60
-
-significance_level = 0.95
+match args.data_amount_unit:
+    case 'trial':
+        unit_multiplier = 1
+    case 'sec':
+        unit_multiplier = args.trial_len_sec
+    case 'min':
+        unit_multiplier = args.trial_len_sec / 60
+    case _:
+        unit_multiplier = args.trial_len_sec
 
 ### ----------------------------- Preprocessing -----------------------------
 low_cut_hz = 4.  
@@ -110,6 +98,9 @@ windows_dataset = create_windows_from_events(
 print('Trial windows extracted')
 
 ### ----------------------------- Create model -----------------------------
+# Specify which GPU to run on to avoid collisions
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
+
 # check if GPU is available, if True choose to use it
 cuda = torch.cuda.is_available()  
 if cuda:
@@ -123,7 +114,7 @@ else:
 seed = 20200220
 set_random_seeds(seed=seed, cuda=cuda)
 
-classes = list(range(n_classes))
+classes = list(range(args.n_classes))
 # Extract number of chans and time steps from dataset
 n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
@@ -153,56 +144,81 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
     
     train_trials_num = len(subj_train_set.get_metadata())
 
-    for training_data_amount in np.arange(1, train_trials_num // data_amount_step) * data_amount_step:
+    for training_data_amount in np.arange(1, train_trials_num // args.data_amount_step) * args.data_amount_step:
     
         final_accuracy = []
 
-        for i in range(repetition):
+        for i in range(args.repetition):
 
+            ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
             cur_model = model_object(
                 n_chans,
-                n_classes,
+                args.n_classes,
                 input_window_samples=input_window_samples,
-                final_conv_length='auto',
+                **(args.model_kwargs)
             )
-            
-            cur_batch_size = int(min(training_data_amount // 2, batch_size))
+            # Send model to GPU
+            if cuda:
+                cur_model.cuda()
+
+            ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
+            # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
+            embedding_shape = torch.Size([1, 749])
+            sample_shape = torch.Size([n_chans, input_window_samples])
+            myHNBCI = HyperBCINet(cur_model, embedding_shape, sample_shape)
+            # Send myHNBCI to GPU
+            if cuda:
+                myHNBCI.cuda()
+
+            cur_batch_size = int(min(training_data_amount // 2, args.batch_size))
         
-            # Initialize EEGClassifier
-            cur_clf = EEGClassifier(
-                cur_model,
-                criterion=torch.nn.NLLLoss,
-                optimizer=torch.optim.AdamW,
-                train_split=predefined_split(subj_valid_set),  # using valid_set for validation
-                optimizer__lr=lr,
-                optimizer__weight_decay=weight_decay,
-                batch_size=batch_size,
-                callbacks=[
-                    "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
-                ],
-                device=device,
-                classes=classes,
+            optimizer = torch.optim.AdamW(
+                myHNBCI.parameters(),
+                lr=args.lr, 
+                weight_decay=args.weight_decay)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=args.n_epochs - 1
             )
-        
+            loss_fn = torch.nn.NLLLoss()
+
             # Get current training set
             cur_train_set = get_subset(subj_train_set, int(training_data_amount), random_sample=True)
-        
-            # Fit model
-            print(f'Training model for subject {subj_id} with {training_data_amount} = {len(cur_train_set)} trials (repetition {i})')
-            _ = cur_clf.fit(cur_train_set, y=None, epochs=n_epochs)
-        
-            # results_columns = ['train_loss', 'valid_loss', 'train_accuracy', 'valid_accuracy']
-            results_columns = ['train_accuracy', 'valid_accuracy',]
-            df = pd.DataFrame(cur_clf.history[:, results_columns], columns=results_columns,
-                              index=cur_clf.history[:, 'epoch'])
-            
-            # get percent of misclass for better visual comparison to loss
-            df = df.assign(train_misclass=100 - 100 * df.train_accuracy,
-                           valid_misclass=100 - 100 * df.valid_accuracy)
-        
-            cur_final_acc = np.mean(df.tail(5).valid_accuracy)
-            final_accuracy.append(cur_final_acc)
-            dict_subj_results.update({training_data_amount: final_accuracy})
+            cur_train_loader = DataLoader(cur_train_set, batch_size=cur_batch_size, shuffle=True)
+            cur_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
+
+            test_accuracy_lst = []
+            for epoch in range(1, args.n_epochs + 1):
+                print(f"Epoch {epoch}/{args.n_epochs}: ", end="")
+
+                train_loss, train_accuracy = train_one_epoch(
+                    cur_train_loader, 
+                    myHNBCI, 
+                    loss_fn, 
+                    optimizer, 
+                    scheduler, 
+                    epoch, 
+                    device,
+                    print_batch_stats=False
+                )
+
+                # Update weight tensor for each evaluation pass
+                myHNBCI.calibrate()
+                test_loss, test_accuracy = test_model(
+                    cur_valid_loader, 
+                    myHNBCI, 
+                    loss_fn)
+                myHNBCI.calibrating = False
+
+                test_accuracy_lst.append(test_accuracy)
+                print(
+                    f"Train Accuracy: {100 * train_accuracy:.2f}%, "
+                    f"Average Train Loss: {train_loss:.6f}, "
+                    f"Test Accuracy: {100 * test_accuracy:.1f}%, "
+                    f"Average Test Loss: {test_loss:.6f}\n"
+                )
+
+            dict_subj_results.update({training_data_amount: np.mean(test_accuracy_lst[-5:])})
 
         dict_results.update({subj_id: dict_subj_results})
 
@@ -227,23 +243,49 @@ fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
 for col in df_results.columns:
     y_values = [np.mean(lst) for lst in df_results[col]]
     y_errors = [np.std(lst) for lst in df_results[col]]
-    ax1.errorbar(df_results.index * unit_multiplier, y_values, yerr=y_errors, label=f'Subject {col}')
-    ax2.plot(df_results.index * unit_multiplier, y_values, label=f'Subject {col}')
+    ax1.errorbar(
+        df_results.index * unit_multiplier, 
+        y_values, 
+        yerr=y_errors, 
+        label=f'Subject {col}'
+    )
+    ax2.plot(
+        df_results.index * unit_multiplier, 
+        y_values, 
+        label=f'Subject {col}'
+    )
 
 df_results_rep_avg = df_results.applymap(lambda x: np.mean(x))
 subject_averaged_df = df_results_rep_avg.mean(axis=1)
 std_err_df = df_results_rep_avg.sem(axis=1)
-conf_interval_df = stats.t.interval(significance_level, len(df_results_rep_avg.columns) - 1, 
-                                    loc=subject_averaged_df, scale=std_err_df)
+conf_interval_df = stats.t.interval(
+    args.significance_level, 
+    len(df_results_rep_avg.columns) - 1, 
+    loc=subject_averaged_df, 
+    scale=std_err_df)
 
-ax3.plot(subject_averaged_df.index * unit_multiplier, subject_averaged_df, label='Subject averaged')
-ax3.fill_between(subject_averaged_df.index * unit_multiplier, conf_interval_df[0], conf_interval_df[1], 
-                 color='b', alpha=0.3, label=f'{significance_level*100}% CI')
+ax3.plot(
+    subject_averaged_df.index * unit_multiplier, 
+    subject_averaged_df, 
+    label='Subject averaged'
+)
+ax3.fill_between(
+    subject_averaged_df.index * unit_multiplier, 
+    conf_interval_df[0], 
+    conf_interval_df[1], 
+    color='b', 
+    alpha=0.3, 
+    label=f'{args.significance_level*100}% CI'
+)
 
 for ax in [ax1, ax2, ax3]:
     ax.legend()
-    ax.set_xlabel(f'Training data amount ({data_amount_unit})')
+    ax.set_xlabel(f'Training data amount ({args.data_amount_unit})')
     ax.set_ylabel('Accuracy')
 
-plt.suptitle(f'{model_name} on {dataset_name} Dataset \n Train model from scratch for each subject, {repetition} reps each point')
+plt.suptitle(
+    f'{args.model_name} on {args.dataset_name} Dataset \n , ' + 
+    'Train model from scratch for each subject ' +
+    f'{args.repetition} reps each point'
+)
 plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))
