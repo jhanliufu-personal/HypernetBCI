@@ -1,7 +1,7 @@
 import torch
 from torch.nn.utils.stateless import functional_call
-from Embedder import Conv1dEmbedder
-from Hypernet import LinearHypernet
+from models.Embedder import Conv1dEmbedder
+from models.Hypernet import LinearHypernet
 
 
 class HyperBCINet(torch.nn.Module):
