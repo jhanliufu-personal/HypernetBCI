@@ -175,4 +175,9 @@ plt.figure()
 plt.plot(train_acc_lst, label='Training accuracy')
 plt.plot(test_acc_lst, label='Test accuracy')
 plt.legend()
+
+plt.xlabel('Training epochs')
+plt.ylabel('Accuracy')
+plt.title('HypernetBCI sanity check 1')
+
 plt.savefig(f'{dir_results}HN_sanity_test_1.png')
