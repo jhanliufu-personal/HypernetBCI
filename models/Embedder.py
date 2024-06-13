@@ -36,8 +36,8 @@ class Conv1dEmbedder(Embedder):
             self, 
             sample_shape: torch.Size,
             embedding_shape: torch.Size, 
-            kernel_size=3, 
-            stride=1, 
+            kernel_size=5, 
+            stride=3, 
             padding=0, 
             dilation=1
         ) -> None:

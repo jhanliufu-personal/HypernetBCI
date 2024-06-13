@@ -218,6 +218,7 @@ def train_one_epoch(
         dataloader: DataLoader, model: Module, loss_fn, optimizer,
         scheduler: LRScheduler, epoch: int, device="cuda", print_batch_stats=False
 ):
+    print('Train model!')
     model.train()  # Set the model to training mode
     train_loss, correct = 0, 0
 
@@ -259,6 +260,7 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 def test_model(
     dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda"
 ):
+    print('Test model!')
     size = len(dataloader.dataset)
     n_batches = len(dataloader)
     model.eval()  # Switch to evaluation mode
