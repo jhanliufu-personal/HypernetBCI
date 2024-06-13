@@ -3,7 +3,7 @@
 from torch.utils.data import DataLoader
 # from torch import nn
 # import math
-import numpy
+import numpy as np
 # from tqdm import tqdm
 from braindecode.datasets import MOABBDataset
 from braindecode.preprocessing import create_windows_from_events
