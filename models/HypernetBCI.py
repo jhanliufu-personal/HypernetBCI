@@ -103,14 +103,17 @@ class HyperBCINet(torch.nn.Module):
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': aggregated_weight_tensor})
 
-                print('Forward pass using functional call')
-                return functional_call(self.primary_net, self.primary_params, x)
+                # print('Forward pass using functional call')
+                # return functional_call(self.primary_net, self.primary_params, x)
 
             # else evaluate each input with its corresponding weight tensor
             else:
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
 
-        print('Forward pass through the primary net')
-        # For model testing / evaluation, just forward pass
-        return self.primary_net(x)
+        # print('Forward pass through the primary net')
+        # # For model testing / evaluation, just forward pass
+        # return self.primary_net(x)
+    
+        print('Forward pass using functional call')
+        return functional_call(self.primary_net, self.primary_params, x)

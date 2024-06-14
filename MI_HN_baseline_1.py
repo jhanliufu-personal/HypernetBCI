@@ -203,12 +203,12 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                 )
 
                 # Update weight tensor for each evaluation pass
-                myHNBCI.calibrate()
+                # myHNBCI.calibrate()
                 test_loss, test_accuracy = test_model(
                     cur_valid_loader, 
                     myHNBCI, 
                     loss_fn)
-                myHNBCI.calibrating = False
+                # myHNBCI.calibrating = False
 
                 test_accuracy_lst.append(test_accuracy)
                 print(
@@ -284,7 +284,7 @@ for ax in [ax1, ax2, ax3]:
     ax.set_ylabel('Accuracy')
 
 plt.suptitle(
-    f'{args.model_name} on {args.dataset_name} Dataset \n , ' + 
+    f'HYPER{args.model_name} on {args.dataset_name} Dataset \n , ' + 
     'Train model from scratch for each subject ' +
     f'{args.repetition} reps each point'
 )
