@@ -11,3 +11,5 @@ Quick calibration of DL-based BCI models enabled by hypernetworks
 * **{MI, SS}_HN_sanity_check.py**: as the name suggests, this is a sanity check experiment. It takes arbitrary primary network **XYZ** and builds a hypernetwork over it. The entire architecture is referred to as **HyperXYZ**. **HyperXYZ** is trained with all training data from an individual subject to make sure that it at least performs similarly as the original network. There is no transfer / calibration / adaptation here.
 
 * **{MI, SS}_HN_baseline_1.py**: this is similar to baseline 1 but with hypernet. **HyperXYZ** is trained from scratch for each person using varying amount of training data. There may or may not be HN pass during testing, check experiment record to access that info.
+
+* **{MI, SS}_HN_new_person_calibration.py**: this is the main experiment of the project. Each person is held out as the new person, and **HyperXYZ** is pretrained with data from everyone else (pretrain pool). In the clibration stage, we use varying amount of data from the new person to calibrate the model through hypernet. The model is then frozen (no calibration) during testing.
