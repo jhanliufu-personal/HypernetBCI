@@ -37,8 +37,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2,]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -143,6 +143,7 @@ for holdout_subj_id in subject_ids_lst:
 
     # Check if a pre-trained model exists
     model_param_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth')
+    pretrain_curve_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png')
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
 
     if not model_exist:
@@ -206,7 +207,8 @@ for holdout_subj_id in subject_ids_lst:
         pre_train_train_loader = DataLoader(pre_train_train_set, batch_size=args.batch_size, shuffle=True)
         pre_train_test_loader = DataLoader(pre_train_test_set, batch_size=args.batch_size)
 
-        # test_accuracy_lst = []
+        pretrain_train_acc_lst = []
+        pretrain_test_acc_lst = []
         for epoch in range(1, args.n_epochs + 1):
             print(f"Epoch {epoch}/{args.n_epochs}: ", end="")
 
@@ -238,7 +240,20 @@ for holdout_subj_id in subject_ids_lst:
                 f"Average Test Loss: {test_loss:.6f}\n"
             )
 
-        # Save the model parameters to a file
+            pretrain_train_acc_lst.append(train_accuracy)
+            pretrain_test_acc_lst.append(test_accuracy)
+
+        # Plot and save the pretraining curve
+        plt.figure()
+        plt.plot(pretrain_train_acc_lst, label='Training accuracy')
+        plt.plot(pretrain_test_acc_lst, label='Test accuracy')
+        plt.legend()
+        plt.xlabel('Training epochs')
+        plt.ylabel('Accuracy')
+        plt.title(f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve')
+        plt.savefig(pretrain_curve_path)
+
+        # Save the pre-trained model parameters to a file
         torch.save(
             {
                 'HN_params_dict': pretrain_HNBCI.state_dict(), 
@@ -314,7 +329,7 @@ for holdout_subj_id in subject_ids_lst:
                 calibrate_HNBCI.cuda()
     
             ### CALIBRATE! PASS IN THE ENTIRE SUBSET
-            print(f'Calibrating model for subject {holdout_subj_id}' +
+            print(f'Calibrating model for subject {holdout_subj_id} ' +
                   f'with {len(subj_calibrate_subset)} trials (repetition {i})'
             )
 

@@ -8,8 +8,8 @@
     {
         "final_conv_length": "auto"
     },
-    "data_amount_step": 100,
-    "repetition": 1, 
+    "data_amount_step": 20,
+    "repetition": 3, 
     "n_classes": 4,
     "lr": 0.065e-2,
     "batch_size": 64,
