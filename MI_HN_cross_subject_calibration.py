@@ -142,16 +142,10 @@ for holdout_subj_id in subject_ids_lst:
     ### -----------------------------------------------------------------------------------------
 
     # Check if a pre-trained model exists
-    # shouldn't have har coded it. Need to think of a better way to use pretrained models from other experiment
-    # temp_exp_name = 'baseline_2_6_pretrain'
-
     model_param_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth')
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
 
-    if model_exist:
-        if args.only_pretrain:
-            continue
-    else:
+    if not model_exist:
         ### ---------------------------- CREATE PRIMARY NETWORK ----------------------------
         cur_model = model_object(
             n_chans,
@@ -232,7 +226,8 @@ for holdout_subj_id in subject_ids_lst:
             test_loss, test_accuracy = test_model(
                 pre_train_test_loader, 
                 pretrain_HNBCI, 
-                loss_fn
+                loss_fn,
+                print_batch_stats=False
             )
             pretrain_HNBCI.calibrating = False
 
@@ -251,6 +246,9 @@ for holdout_subj_id in subject_ids_lst:
             },
             model_param_path
         )
+
+    if args.only_pretrain:
+        continue
 
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- CALIBRATION ------------------------------------
@@ -285,6 +283,7 @@ for holdout_subj_id in subject_ids_lst:
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
+    # create validation dataloader
     subj_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
     _, calibrate_baseline_acc = test_model(subj_valid_loader, calibrate_HNBCI, loss_fn)
     print(f'Before calibrating for subject {holdout_subj_id}, the baseline accuracy is {calibrate_baseline_acc}')
