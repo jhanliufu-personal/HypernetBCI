@@ -1,12 +1,11 @@
 '''
-baseline 2 refers to experiments that test the "fine tune" approach.
-Before fine tuning a model for a subject, the model is pre-trained on
-all other subjects.
+HN cross-subject calibration experiment: hold out each person as the new arrival, and pre-train
+the HyperBCI on everyone else put together as the pre-train pool. For the new arrival person, 
+their data is splitted into calibration set and validation set. Varying amount of data is drawn
+from the calibration set for calibration, then the calibrated model is evaluated using the test set.
 
-This is a very head-empty approach, since no distinction bewteen subjects
-is made within the pre-train dataset.
-
-For other approaches, check out the meta learning papers
+The calibration process is unsupervised; the HN is expected to pick up relevant info from the
+calibration set.
 '''
 
 import matplotlib.pyplot as plt
@@ -18,10 +17,6 @@ from braindecode.preprocessing import (Preprocessor,
 from braindecode.preprocessing import create_windows_from_events
 import torch
 from braindecode.util import set_random_seeds
-from skorch.callbacks import LRScheduler
-from skorch.helper import predefined_split
-from braindecode import EEGClassifier
-import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats
 import os
@@ -31,8 +26,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from utils import (
-    get_subset, import_model, clf_predict_on_set, parse_training_config, 
-    freeze_param, train_one_epoch, test_model
+    get_subset, import_model, parse_training_config, 
+    train_one_epoch, test_model
 )
 from models.HypernetBCI import HyperBCINet
 
@@ -42,8 +37,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -265,15 +260,15 @@ for holdout_subj_id in subject_ids_lst:
     ### THIS PART IS FOR BCNI2014001
     if args.dataset_name == 'BCNI2014001':
         calibrate_splitted_lst_by_run = list(calibrate_set.split('run').values())
-        calibrate_subj_train_set = BaseConcatDataset(calibrate_splitted_lst_by_run[:-1])
-        calibrate_subj_valid_set = BaseConcatDataset(calibrate_splitted_lst_by_run[-1:])
+        subj_calibrate_set = BaseConcatDataset(calibrate_splitted_lst_by_run[:-1])
+        subj_valid_set = BaseConcatDataset(calibrate_splitted_lst_by_run[-1:])
     ### THIS PART IS FOR SHCIRRMEISTER 2017
     elif args.dataset_name == 'Schirrmeister2017':
         calibrate_splitted_lst_by_run = calibrate_set.split('run')
-        calibrate_subj_train_set = calibrate_splitted_lst_by_run.get('0train')
-        calibrate_subj_valid_set = calibrate_splitted_lst_by_run.get('1test')
+        subj_calibrate_set = calibrate_splitted_lst_by_run.get('0train')
+        subj_valid_set = calibrate_splitted_lst_by_run.get('1test')
 
-    ### Load pretrained model
+    ### Resume pretrained model
     calibrate_model = model_object(
         n_chans,
         args.n_classes,
@@ -290,14 +285,14 @@ for holdout_subj_id in subject_ids_lst:
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
-    calibrate_subj_valid_loader = DataLoader(calibrate_subj_valid_set, batch_size=args.batch_size)
-    _, calibrate_baseline_acc = test_model(calibrate_subj_valid_loader, calibrate_HNBCI, loss_fn)
+    subj_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
+    _, calibrate_baseline_acc = test_model(subj_valid_loader, calibrate_HNBCI, loss_fn)
     print(f'Before calibrating for subject {holdout_subj_id}, the baseline accuracy is {calibrate_baseline_acc}')
 
     ### Calibrate with varying amount of new data
     dict_subj_results = {0: [calibrate_baseline_acc,]}
-    calibrate_trials_num = len(calibrate_subj_train_set.get_metadata())
-    for calibrate_training_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
+    calibrate_trials_num = len(subj_calibrate_set.get_metadata())
+    for calibrate_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
 
         test_accuracy_lst = []
         
@@ -305,9 +300,9 @@ for holdout_subj_id in subject_ids_lst:
         for i in range(args.repetition):
 
             ## Get current calibration samples
-            cur_calibrate_subj_train_subset = get_subset(
-                calibrate_subj_train_set, 
-                int(calibrate_training_data_amount), 
+            subj_calibrate_subset = get_subset(
+                subj_calibrate_set, 
+                int(calibrate_data_amount), 
                 random_sample=True
             )
 
@@ -319,24 +314,41 @@ for holdout_subj_id in subject_ids_lst:
                 calibrate_model.cuda()
                 calibrate_HNBCI.cuda()
     
-            # CALIBRATE! PASS IN THE ENTIRE SUBSET
+            ### CALIBRATE! PASS IN THE ENTIRE SUBSET
             print(f'Calibrating model for subject {holdout_subj_id}' +
-                  f'with {len(cur_calibrate_subj_train_subset)} trials (repetition {i})'
+                  f'with {len(subj_calibrate_subset)} trials (repetition {i})'
             )
 
-            #     test_loss, test_accuracy = test_model(finetune_subj_valid_loader, finetune_model, loss_fn)
-            #     test_accuracy_lst.append(test_accuracy)
+            # This dataloader returns the whole subset at once.
+            subj_calibrate_loader = DataLoader(
+                subj_calibrate_subset, 
+                batch_size=len(subj_calibrate_subset), 
+                shuffle=True
+            )
+            calibrate_HNBCI.calibrate()
+            _, _ = test_model(subj_calibrate_loader, calibrate_HNBCI, loss_fn)
+            calibrate_HNBCI.calibrating = False
 
-            #     print(
-            #         f"Train Accuracy: {100 * train_accuracy:.2f}%, "
-            #         f"Average Train Loss: {train_loss:.6f}, "
-            #         f"Test Accuracy: {100 * test_accuracy:.1f}%, "
-            #         f"Average Test Loss: {test_loss:.6f}\n"
-            #     )
+            # Test the calibrated model
+            test_loss, test_accuracy = test_model(subj_valid_loader, calibrate_HNBCI, loss_fn)
+            test_accuracy_lst.append(test_accuracy)
+
+            print(
+                f"Test Accuracy: {100 * test_accuracy:.1f}%, "
+                f"Average Test Loss: {test_loss:.6f}\n"
+            )
         
-        dict_subj_results.update({calibrate_training_data_amount: np.mean(test_accuracy_lst[-5:])})
+        dict_subj_results.update(
+            {
+                calibrate_data_amount: test_accuracy_lst
+            }
+        )
 
-    dict_results.update({holdout_subj_id: dict_subj_results})
+    dict_results.update(
+        {
+            holdout_subj_id: dict_subj_results
+        }
+    )
     ### ----------------------------- Save results -----------------------------
     # Save results after done with a subject, in case server crashes
     # remove existing results file if one exists
@@ -401,8 +413,12 @@ ax3.fill_between(
 
 for ax in [ax1, ax2, ax3]:
     ax.legend()
-    ax.set_xlabel(f'Fine tune data amount ({args.data_amount_unit})')
+    ax.set_xlabel(f'Calibration data amount ({args.data_amount_unit})')
     ax.set_ylabel('Accuracy')
 
-plt.suptitle(f'{args.model_name} on {args.dataset_name} Dataset \n fine tune model for each subject, {args.repetition} reps each point')
+plt.suptitle(
+    f'HYPER{args.model_name} on {args.dataset_name} Dataset \n , ' +
+    'Calibrate model for each subject (cross subject calibration), ' +
+    f'{args.repetition} reps each point'
+)
 plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))
