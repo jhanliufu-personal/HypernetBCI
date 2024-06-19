@@ -141,6 +141,7 @@ for holdout_subj_id in subject_ids_lst:
     ### ---------------------------------------- PRETRAINING ------------------------------------
     ### -----------------------------------------------------------------------------------------
 
+    temp_exp_name = 'HN_xsubj_calibration_1_pretrain'
     # Check if a pre-trained model exists
     model_param_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth')
     pretrain_curve_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png')
@@ -220,7 +221,8 @@ for holdout_subj_id in subject_ids_lst:
                 scheduler, 
                 epoch, 
                 device,
-                print_batch_stats=False
+                print_batch_stats=False,
+                **(args.forward_pass_kwargs)
             )
             
             # Update weight tensor for each evaluation pass
@@ -229,7 +231,8 @@ for holdout_subj_id in subject_ids_lst:
                 pre_train_test_loader, 
                 pretrain_HNBCI, 
                 loss_fn,
-                print_batch_stats=False
+                print_batch_stats=False,
+                **(args.forward_pass_kwargs)
             )
             pretrain_HNBCI.calibrating = False
 
@@ -300,7 +303,13 @@ for holdout_subj_id in subject_ids_lst:
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
     # create validation dataloader
     subj_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
-    _, calibrate_baseline_acc = test_model(subj_valid_loader, calibrate_HNBCI, loss_fn)
+    calibrate_HNBCI.calibrating = False
+    _, calibrate_baseline_acc = test_model(
+        subj_valid_loader, 
+        calibrate_HNBCI, 
+        loss_fn, 
+        **(args.forward_pass_kwargs)
+    )
     print(f'Before calibrating for subject {holdout_subj_id}, the baseline accuracy is {calibrate_baseline_acc}')
 
     ### Calibrate with varying amount of new data
@@ -340,11 +349,21 @@ for holdout_subj_id in subject_ids_lst:
                 shuffle=True
             )
             calibrate_HNBCI.calibrate()
-            _, _ = test_model(subj_calibrate_loader, calibrate_HNBCI, loss_fn)
+            _, _ = test_model(
+                subj_calibrate_loader, 
+                calibrate_HNBCI, 
+                loss_fn, 
+                **(args.forward_pass_kwargs)
+            )
             calibrate_HNBCI.calibrating = False
 
             # Test the calibrated model
-            test_loss, test_accuracy = test_model(subj_valid_loader, calibrate_HNBCI, loss_fn)
+            test_loss, test_accuracy = test_model(
+                subj_valid_loader, 
+                calibrate_HNBCI, 
+                loss_fn,
+                **(args.forward_pass_kwargs)
+            )
             test_accuracy_lst.append(test_accuracy)
 
             print(

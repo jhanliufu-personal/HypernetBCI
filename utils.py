@@ -176,6 +176,8 @@ def parse_training_config():
     parser.add_argument('--freeze_most_layers', default=False, type=bool)
     parser.add_argument('--fine_tune_freeze_layers_but', default=None, type=list)
 
+    parser.add_argument('--forward_pass_kwargs', default=None)
+
     args = parser.parse_args()
     with open(args.json, 'r') as f:
         args_from_json = json.load(f)
@@ -215,8 +217,9 @@ Define a method for training one epoch. Adapted from
 https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_pytorch_and_pytorch_lightning.html
 '''
 def train_one_epoch(
-        dataloader: DataLoader, model: Module, loss_fn, optimizer,
-        scheduler: LRScheduler, epoch: int, device="cuda", print_batch_stats=False
+    dataloader: DataLoader, model: Module, loss_fn, optimizer,
+    scheduler: LRScheduler, epoch: int, device="cuda", print_batch_stats=False,
+    **forward_pass_kwargs
 ):
     print('Train model!')
     model.train()  # Set the model to training mode
@@ -228,7 +231,8 @@ def train_one_epoch(
     for batch_idx, (X, y, _) in progress_bar:
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
-        pred = model(X)
+        pred = model(X, **forward_pass_kwargs)
+        # pred = model(X, random_update=True)
         loss = loss_fn(pred, y)
         loss.backward()
         optimizer.step()  # update the model weights
@@ -258,7 +262,7 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 '''
 @torch.no_grad()
 def test_model(
-    dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda"
+    dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda", **forward_pass_kwargs
 ):
     print('Test model!')
     size = len(dataloader.dataset)
@@ -273,7 +277,8 @@ def test_model(
 
     for batch_idx, (X, y, _) in progress_bar:
         X, y = X.to(device), y.to(device)
-        pred = model(X)
+        pred = model(X, **forward_pass_kwargs)
+        # pred = model(X, random_update=True)
         batch_loss = loss_fn(pred, y).item()
 
         test_loss += batch_loss
