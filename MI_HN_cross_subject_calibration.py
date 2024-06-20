@@ -147,6 +147,10 @@ for holdout_subj_id in subject_ids_lst:
     pretrain_curve_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png')
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
 
+    # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
+    embedding_shape = torch.Size([1, 749])
+    sample_shape = torch.Size([n_chans, input_window_samples])
+
     if not model_exist:
         ### ---------------------------- CREATE PRIMARY NETWORK ----------------------------
         cur_model = model_object(
@@ -157,9 +161,6 @@ for holdout_subj_id in subject_ids_lst:
         )
                     
         ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
-        # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-        embedding_shape = torch.Size([1, 749])
-        sample_shape = torch.Size([n_chans, input_window_samples])
         pretrain_HNBCI = HyperBCINet(cur_model, embedding_shape, sample_shape)
         # Send to GPU
         if cuda:
