@@ -149,8 +149,9 @@ for holdout_subj_id in subject_ids_lst:
 
     # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
     embedding_shape = torch.Size([1, 749])
-    print(embedding_shape)
+    # print(embedding_shape)
     sample_shape = torch.Size([n_chans, input_window_samples])
+    loss_fn = torch.nn.NLLLoss()
 
     if not model_exist:
         ### ---------------------------- CREATE PRIMARY NETWORK ----------------------------
@@ -176,7 +177,7 @@ for holdout_subj_id in subject_ids_lst:
             optimizer,
             T_max=args.n_epochs - 1
         )
-        loss_fn = torch.nn.NLLLoss()
+        # loss_fn = torch.nn.NLLLoss()
 
         ### ---------------------------- PREPARE PRETRAIN DATASETS ----------------------------
         ### THIS PART IS FOR BCNI2014001
@@ -293,7 +294,7 @@ for holdout_subj_id in subject_ids_lst:
         input_window_samples=input_window_samples,
         **(args.model_kwargs)
     )
-    print(embedding_shape)
+    # print(embedding_shape)
     calibrate_HNBCI = HyperBCINet(calibrate_model, embedding_shape, sample_shape)
     pretrained_params = torch.load(model_param_path)
     calibrate_HNBCI.load_state_dict(pretrained_params['HN_params_dict'])
