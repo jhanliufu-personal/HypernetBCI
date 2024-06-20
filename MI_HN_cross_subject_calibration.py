@@ -222,7 +222,7 @@ for holdout_subj_id in subject_ids_lst:
                 epoch, 
                 device,
                 print_batch_stats=False,
-                **(args.forward_pass_kwargs)
+                # **(args.forward_pass_kwargs)
             )
             
             # Update weight tensor for each evaluation pass
@@ -232,7 +232,7 @@ for holdout_subj_id in subject_ids_lst:
                 pretrain_HNBCI, 
                 loss_fn,
                 print_batch_stats=False,
-                **(args.forward_pass_kwargs)
+                # **(args.forward_pass_kwargs)
             )
             pretrain_HNBCI.calibrating = False
 
