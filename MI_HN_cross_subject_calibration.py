@@ -37,8 +37,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -149,6 +149,7 @@ for holdout_subj_id in subject_ids_lst:
 
     # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
     embedding_shape = torch.Size([1, 749])
+    print(embedding_shape)
     sample_shape = torch.Size([n_chans, input_window_samples])
 
     if not model_exist:
@@ -292,6 +293,7 @@ for holdout_subj_id in subject_ids_lst:
         input_window_samples=input_window_samples,
         **(args.model_kwargs)
     )
+    print(embedding_shape)
     calibrate_HNBCI = HyperBCINet(calibrate_model, embedding_shape, sample_shape)
     pretrained_params = torch.load(model_param_path)
     calibrate_HNBCI.load_state_dict(pretrained_params['HN_params_dict'])
