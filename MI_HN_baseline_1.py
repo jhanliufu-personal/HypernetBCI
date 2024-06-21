@@ -213,14 +213,14 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                 train_accuracy_lst.append(train_accuracy)
 
                 # Update weight tensor for each evaluation pass
-                # myHNBCI.calibrate()
+                myHNBCI.calibrate()
                 test_loss, test_accuracy = test_model(
                     cur_valid_loader, 
                     myHNBCI, 
                     loss_fn,
                     **(args.forward_pass_kwargs)
                 )
-                # myHNBCI.calibrating = False
+                myHNBCI.calibrating = False
 
                 test_accuracy_lst.append(test_accuracy)
                 print(
