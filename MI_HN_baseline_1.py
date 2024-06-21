@@ -207,7 +207,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                     epoch, 
                     device,
                     print_batch_stats=False,
-                    **(args.forward_pass_kwargs)
+                    # **(args.forward_pass_kwargs)
                 )
 
                 train_accuracy_lst.append(train_accuracy)
