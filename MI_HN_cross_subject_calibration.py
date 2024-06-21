@@ -342,8 +342,9 @@ for holdout_subj_id in subject_ids_lst:
                 calibrate_HNBCI.cuda()
     
             ### CALIBRATE! PASS IN THE ENTIRE SUBSET
-            print(f'Calibrating model for subject {holdout_subj_id} ' +
-                  f'with {len(subj_calibrate_subset)} trials (repetition {i})'
+            print(
+                f'Calibrating model for subject {holdout_subj_id} ' +
+                f'with {len(subj_calibrate_subset)} trials (repetition {i})'
             )
 
             # This dataloader returns the whole subset at once.

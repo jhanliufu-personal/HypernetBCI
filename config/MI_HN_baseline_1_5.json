@@ -1,8 +1,8 @@
 {
-    "gpu_number": "1",
+    "gpu_number": "2",
     "model_name": "ShallowFBCSPNet",
     "dataset_name": "Schirrmeister2017",
-    "experiment_version": 4,
+    "experiment_version": 5,
     "model_kwargs":
     {
         "final_conv_length": "auto"

@@ -35,20 +35,6 @@ print('Data loaded')
 results_file_name = f'{args.model_name}_{args.dataset_name}_from_scratch_{args.experiment_version}'
 dir_results = 'results/'
 
-### ----------------------------- Training parameters -----------------------------
-# # Increment training set size by 'data_amount_step' each time
-# data_amount_step = 20
-# # Repeat training with a certain training set size for 'repetition' times
-# repetition = 10
-# # 'n_classes' class classification task
-# n_classes = 4
-# # learning rate
-# lr = 0.0625 * 0.01
-# weight_decay = 0
-# batch_size = 64
-# # training epochs
-# n_epochs = 40
-
 ### ----------------------------- Plotting parameters -----------------------------
 if args.data_amount_unit == 'trial':
     unit_multiplier = 1
@@ -134,7 +120,9 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
     ### Split by train and test sessions
     splitted_by_run = subj_dataset.split('run')
     subj_train_set = splitted_by_run.get('0train')
+
     subj_valid_set = splitted_by_run.get('1test')
+    cur_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
 
     ### Use the last "valid_set_size" number of sets for testing
     # splitted_lst_by_run = list(subj_dataset.split('run').values())
@@ -160,7 +148,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
 
             cur_model = model_object(
                 n_chans,
-                n_classes,
+                args.n_classes,
                 input_window_samples=input_window_samples,
                 final_conv_length='auto',
             )
@@ -177,18 +165,33 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
             )
             loss_fn = torch.nn.NLLLoss()
 
-            cur_train_loader = DataLoader(cur_train_set, batch_size=args.batch_size, shuffle=True)
-            cur_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
-
+            cur_train_loader = DataLoader(
+                cur_train_set, 
+                batch_size=args.batch_size, 
+                shuffle=True
+            )
+            
             test_accuracy_lst = []
             for epoch in range(1, args.n_epochs + 1):
                 print(f"Epoch {epoch}/{args.n_epochs}: ", end="")
 
                 train_loss, train_accuracy = train_one_epoch(
-                    cur_train_loader, cur_model, loss_fn, optimizer, scheduler, epoch, device,
+                    cur_train_loader, 
+                    cur_model, 
+                    loss_fn, 
+                    optimizer, 
+                    scheduler, 
+                    epoch, 
+                    device,
+                    print_batch_stats=False
                 )
 
-                test_loss, test_accuracy = test_model(cur_valid_loader, cur_model, loss_fn)
+                test_loss, test_accuracy = test_model(
+                    cur_valid_loader, 
+                    cur_model, 
+                    loss_fn,
+                    print_batch_stats=False
+                )
                 test_accuracy_lst.append(test_accuracy)
 
                 print(

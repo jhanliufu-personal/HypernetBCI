@@ -121,11 +121,15 @@ n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
 ### ----------------------------- Training -----------------------------
-dict_results = {}
+# dict_results = {}
+dict_training_results = {}
+dict_testing_results = {}
 
 for subj_id, subj_dataset in windows_dataset.split('subject').items():
 
-    dict_subj_results = {}
+    # dict_subj_results = {}
+    dict_subj_training_results = {}
+    dict_subj_testing_results = {}
 
     ### Split by train and test sessions
     splitted_by_run = subj_dataset.split('run')
@@ -147,7 +151,8 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
 
     for training_data_amount in np.arange(1, train_trials_num // args.data_amount_step) * args.data_amount_step:
     
-        final_accuracy = []
+        final_training_accuracy = []
+        final_testing_accuracy = []
 
         for i in range(args.repetition):
 
@@ -188,6 +193,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
             cur_train_loader = DataLoader(cur_train_set, batch_size=cur_batch_size, shuffle=True)
             cur_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
 
+            train_accuracy_lst = []
             test_accuracy_lst = []
             for epoch in range(1, args.n_epochs + 1):
                 print(f"Epoch {epoch}/{args.n_epochs}: ", end="")
@@ -201,18 +207,20 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                     epoch, 
                     device,
                     print_batch_stats=False,
-                    # **(args.forward_pass_kwargs)
+                    **(args.forward_pass_kwargs)
                 )
 
+                train_accuracy_lst.append(train_accuracy)
+
                 # Update weight tensor for each evaluation pass
-                myHNBCI.calibrate()
+                # myHNBCI.calibrate()
                 test_loss, test_accuracy = test_model(
                     cur_valid_loader, 
                     myHNBCI, 
                     loss_fn,
                     **(args.forward_pass_kwargs)
                 )
-                myHNBCI.calibrating = False
+                # myHNBCI.calibrating = False
 
                 test_accuracy_lst.append(test_accuracy)
                 print(
@@ -222,74 +230,78 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                     f"Average Test Loss: {test_loss:.6f}\n"
                 )
 
-            dict_subj_results.update({training_data_amount: np.mean(test_accuracy_lst[-5:])})
+            dict_subj_training_results.update({training_data_amount: np.mean(train_accuracy_lst[-5:])})
+            dict_subj_testing_results.update({training_data_amount: np.mean(test_accuracy_lst[-5:])})
 
-        dict_results.update({subj_id: dict_subj_results})
+        dict_training_results.update({subj_id: dict_subj_training_results})
+        dict_testing_results.update({subj_id: dict_subj_testing_results})
 
 ### ----------------------------- Save results -----------------------------
-file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
+for dict_results, stage in zip([dict_training_results, dict_testing_results], ['training', 'testing']):
 
-with open(file_path, 'wb') as f:
-    pickle.dump(dict_results, f)
+    file_path = os.path.join(dir_results, f'{results_file_name}_{stage}.pkl')
 
-# check if results are saved correctly
-if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-    with open(file_path, 'rb') as f:
-        dummy = pickle.load(f)
-    print("Data was saved successfully.")
-else:
-    print(f"Error: File '{file_path}' does not exist or is empty. The save was insuccesful")
+    with open(file_path, 'wb') as f:
+        pickle.dump(dict_results, f)
 
-### ----------------------------- Plot results -----------------------------
-df_results = pd.DataFrame(dict_results)
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
+    # check if results are saved correctly
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+        with open(file_path, 'rb') as f:
+            dummy = pickle.load(f)
+        print("Data was saved successfully.")
+    else:
+        print(f"Error: File '{file_path}' does not exist or is empty. The save was insuccesful")
 
-for col in df_results.columns:
-    y_values = [np.mean(lst) for lst in df_results[col]]
-    y_errors = [np.std(lst) for lst in df_results[col]]
-    ax1.errorbar(
-        df_results.index * unit_multiplier, 
-        y_values, 
-        yerr=y_errors, 
-        label=f'Subject {col}'
+    ### ----------------------------- Plot results -----------------------------
+    df_results = pd.DataFrame(dict_results)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
+
+    for col in df_results.columns:
+        y_values = [np.mean(lst) for lst in df_results[col]]
+        y_errors = [np.std(lst) for lst in df_results[col]]
+        ax1.errorbar(
+            df_results.index * unit_multiplier, 
+            y_values, 
+            yerr=y_errors, 
+            label=f'Subject {col}'
+        )
+        ax2.plot(
+            df_results.index * unit_multiplier, 
+            y_values, 
+            label=f'Subject {col}'
+        )
+
+    df_results_rep_avg = df_results.applymap(lambda x: np.mean(x))
+    subject_averaged_df = df_results_rep_avg.mean(axis=1)
+    std_err_df = df_results_rep_avg.sem(axis=1)
+    conf_interval_df = stats.t.interval(
+        args.significance_level, 
+        len(df_results_rep_avg.columns) - 1, 
+        loc=subject_averaged_df, 
+        scale=std_err_df)
+
+    ax3.plot(
+        subject_averaged_df.index * unit_multiplier, 
+        subject_averaged_df, 
+        label='Subject averaged'
     )
-    ax2.plot(
-        df_results.index * unit_multiplier, 
-        y_values, 
-        label=f'Subject {col}'
+    ax3.fill_between(
+        subject_averaged_df.index * unit_multiplier, 
+        conf_interval_df[0], 
+        conf_interval_df[1], 
+        color='b', 
+        alpha=0.3, 
+        label=f'{args.significance_level*100}% CI'
     )
 
-df_results_rep_avg = df_results.applymap(lambda x: np.mean(x))
-subject_averaged_df = df_results_rep_avg.mean(axis=1)
-std_err_df = df_results_rep_avg.sem(axis=1)
-conf_interval_df = stats.t.interval(
-    args.significance_level, 
-    len(df_results_rep_avg.columns) - 1, 
-    loc=subject_averaged_df, 
-    scale=std_err_df)
+    for ax in [ax1, ax2, ax3]:
+        ax.legend()
+        ax.set_xlabel(f'Training data amount ({args.data_amount_unit})')
+        ax.set_ylabel(f'{stage} accuracy')
 
-ax3.plot(
-    subject_averaged_df.index * unit_multiplier, 
-    subject_averaged_df, 
-    label='Subject averaged'
-)
-ax3.fill_between(
-    subject_averaged_df.index * unit_multiplier, 
-    conf_interval_df[0], 
-    conf_interval_df[1], 
-    color='b', 
-    alpha=0.3, 
-    label=f'{args.significance_level*100}% CI'
-)
-
-for ax in [ax1, ax2, ax3]:
-    ax.legend()
-    ax.set_xlabel(f'Training data amount ({args.data_amount_unit})')
-    ax.set_ylabel('Accuracy')
-
-plt.suptitle(
-    f'HYPER{args.model_name} on {args.dataset_name} Dataset \n , ' + 
-    'Train model from scratch for each subject ' +
-    f'{args.repetition} reps each point'
-)
-plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))
+    plt.suptitle(
+        f'HYPER{args.model_name} on {args.dataset_name} Dataset \n , ' + 
+        'Train model from scratch for each subject ' +
+        f'{args.repetition} reps each point'
+    )
+    plt.savefig(os.path.join(dir_results, f'{results_file_name}_{stage}.png'))
