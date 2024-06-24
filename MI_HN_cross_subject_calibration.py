@@ -171,7 +171,13 @@ for holdout_subj_id in subject_ids_lst:
         pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
         weight_shape = cur_model.final_layer.conv_classifier.weight.shape
         pretrain_hypernet = LinearHypernet(embedding_shape, weight_shape)
-        pretrain_HNBCI = HyperBCINet(cur_model, embedding_shape, sample_shape)
+        pretrain_HNBCI = HyperBCINet(
+            cur_model, 
+            pretrain_embedder,
+            embedding_shape, 
+            sample_shape,
+            pretrain_hypernet
+        )
         # Send to GPU
         if cuda:
             cur_model.cuda()
