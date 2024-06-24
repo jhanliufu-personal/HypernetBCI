@@ -1,7 +1,7 @@
 import torch
 from torch.nn.utils.stateless import functional_call
-from models.Embedder import Conv1dEmbedder
-from models.Hypernet import LinearHypernet
+# from models.Embedder import Conv1dEmbedder
+# from models.Hypernet import LinearHypernet
 # from Embedder import Conv1dEmbedder
 # from Hypernet import LinearHypernet
 
@@ -20,7 +20,14 @@ class HyperBCINet(torch.nn.Module):
     weight tensors. We can either AGGREGATE the weight tensors to get one weight tensor for the whole
     batch, or evaluate each input sample with its own weight tensor.
     """
-    def __init__(self, primary_net: torch.nn.Module, embedding_shape: torch.Size, sample_shape: torch.Size) -> None:
+    def __init__(
+            self, 
+            primary_net: torch.nn.Module,
+            embedder:  torch.nn.Module,
+            embedding_shape: torch.Size, 
+            sample_shape: torch.Size,
+            hypernet: torch.nn.Module
+        ) -> None:
         """
         Parameters
         ---------------------------------------
@@ -49,10 +56,12 @@ class HyperBCINet(torch.nn.Module):
         self.weight_shape = primary_net.final_layer.conv_classifier.weight.shape
 
         # embedder
-        self.embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+        # self.embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+        self.embedder = embedder
 
         # hypernet / weight generator
-        self.hypernet = LinearHypernet(embedding_shape, self.weight_shape)
+        # self.hypernet = LinearHypernet(embedding_shape, self.weight_shape)
+        self.hypernet = hypernet
         ### ----------------------------------------------------------------------
 
         self.calibrating = False
@@ -93,11 +102,11 @@ class HyperBCINet(torch.nn.Module):
             # This would detach the embedder and weight generator from
             # the computation graph. backprop won't reach them.
             if random_update:
-                print('Update weight tensor to random tensor')
+                print('Update weight tensor to RANDOM TENSOR')
                 random_weight_tensor = torch.randn(self.weight_shape).cuda()
                 # random_weight_tensor.cuda()
                 self.primary_params.update({'final_layer.conv_classifier.weight': random_weight_tensor})
-                print('Functional call using random weight tensor')
+                print('Functional call using RANDOM WEIGHT TENSOR')
                 return functional_call(self.primary_net, self.primary_params, x)
 
             print('Generate new embedding and weights')

@@ -30,10 +30,15 @@ class Hypernet(torch.nn.Module):
 
 
 class LinearHypernet(Hypernet):
-    def __init__(self, embedding_shape: torch.Size, weight_shape: torch.Size) -> None:
+    def __init__(
+            self, 
+            embedding_shape: torch.Size, 
+            weight_shape: torch.Size
+        ) -> None:
         super(LinearHypernet, self).__init__(embedding_shape, weight_shape)
         # Initialize weight generation layer
-        self.input_size = embedding_shape[0] * embedding_shape[1]
+        # self.input_size = embedding_shape[0] * embedding_shape[1]
+        self.input_size = torch.prod(torch.tensor(embedding_shape)).item()
         self.output_size = torch.prod(torch.tensor(weight_shape)).item()
         self.fc = torch.nn.Linear(self.input_size, self.output_size)
 
@@ -50,8 +55,9 @@ class LinearHypernet(Hypernet):
         embedding. has shape: weight_shape
         """
         # Check embedding shape
-        if embedding.shape != self.embedding_shape:
-            raise ValueError('Embedding has wrong shape')
+        assert embedding.shape == self.embedding_shape, 'Embedding has wrong shape'
+        # if embedding.shape != self.embedding_shape:
+        #     raise ValueError('Embedding has wrong shape')
 
         # Flatten the input tensor
         embedding_flattened = embedding.view(-1, self.input_size)
@@ -61,7 +67,8 @@ class LinearHypernet(Hypernet):
         weight_reshaped = weight_flattened.view(*(self.weight_shape))
 
         # Check weight tensor shape
-        if weight_reshaped.shape != self.weight_shape:
-            raise ValueError('The generated weight tensor has wrong shape')
+        assert weight_reshaped.shape == self.weight_shape, 'The generated weight tensor has wrong shape'
+        # if weight_reshaped.shape != self.weight_shape:
+        #     raise ValueError('The generated weight tensor has wrong shape')
 
         return weight_reshaped

@@ -25,6 +25,8 @@ import pickle
 import numpy as np
 from torch.utils.data import DataLoader
 from models.HypernetBCI import HyperBCINet
+from models.Embedder import ShallowFBCSPEmbedder
+from models.Hypernet import LinearHypernet
 
 from utils import (
     get_subset, import_model, train_one_epoch, test_model, parse_training_config
@@ -33,8 +35,8 @@ from utils import (
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [3,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [3,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -169,9 +171,23 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
 
             ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
             # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-            embedding_shape = torch.Size([1, 749])
+            # embedding_shape = torch.Size([1, 749])
+            # this is the input shape of the final layer of ShallowFBCSPNet
+            embedding_shape = torch.Size([40, 144, 1])
+
             sample_shape = torch.Size([n_chans, input_window_samples])
-            myHNBCI = HyperBCINet(cur_model, embedding_shape, sample_shape)
+            my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+
+            weight_shape = cur_model.final_layer.conv_classifier.weight.shape
+            my_hypernet = LinearHypernet(embedding_shape, weight_shape)
+
+            myHNBCI = HyperBCINet(
+                cur_model, 
+                my_embedder,
+                embedding_shape, 
+                sample_shape,
+                my_hypernet
+            )
             # Send myHNBCI to GPU
             if cuda:
                 myHNBCI.cuda()
@@ -218,7 +234,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                     cur_valid_loader, 
                     myHNBCI, 
                     loss_fn,
-                    # **(args.forward_pass_kwargs)
+                    **(args.forward_pass_kwargs)
                 )
                 # myHNBCI.calibrating = False
 
