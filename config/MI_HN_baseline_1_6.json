@@ -7,6 +7,10 @@
     {
         "final_conv_length": "auto"
     },
+    "forward_pass_kwargs":
+    {
+        "random_update": false
+    },
     "data_amount_step": 40,
     "repetition": 3, 
     "n_classes": 4,
