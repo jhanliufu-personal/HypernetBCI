@@ -7,13 +7,16 @@ from braindecode.preprocessing import (
     preprocess,
     Preprocessor,
 )
-from braindecode.models import ShallowFBCSPNet, EEGConformer
+from braindecode.models import ShallowFBCSPNet #, EEGConformer
 from braindecode.util import set_random_seeds
 import torch
 import matplotlib.pyplot as plt
 
-# from models.HypernetBCI import HyperBCINet
+from models.HypernetBCI import HyperBCINet
+from models.Embedder import EEGConformerEmbedder
+from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
+import os
 
 subject_id = 3
 dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
@@ -63,7 +66,8 @@ train_set = splitted['0train']
 valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-cuda = torch.cuda.is_available()  # check if GPU is available, if True chooses to use it
+os.environ["CUDA_VISIBLE_DEVICES"] = 1
+cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
     print('CUDA GPU is available. Use GPU for training')
@@ -76,37 +80,54 @@ classes = list(range(n_classes))
 n_channels = train_set[0][0].shape[0]
 input_window_samples = train_set[0][0].shape[1]
 
-# model = ShallowFBCSPNet(
-#     n_channels,
-#     n_classes,
-#     input_window_samples=input_window_samples,
-#     final_conv_length="auto",
-# )
-
-model = EEGConformer(
-    n_outputs=n_classes,
-    n_chans=n_channels,
-    n_times=input_window_samples,
-    sfreq=sfreq,
-    final_fc_length=5760
+model = ShallowFBCSPNet(
+    n_channels,
+    n_classes,
+    input_window_samples=input_window_samples,
+    final_conv_length="auto",
 )
 
-# Send model to GPU
-if cuda:
-    model.cuda()
-# Parallelize training if possible
-if torch.cuda.device_count() > 1:
-    model = torch.nn.DataParallel(model)
+# model = EEGConformer(
+#     n_outputs=n_classes,
+#     n_chans=n_channels,
+#     n_times=input_window_samples,
+#     sfreq=sfreq,
+#     final_fc_length=5760
+# )
+
+# # Send model to GPU
+# if cuda:
+#     model.cuda()
+# # Parallelize training if possible
+# if torch.cuda.device_count() > 1:
+#     model = torch.nn.DataParallel(model)
 
 ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
+sample_shape = torch.Size([n_channels, input_window_samples])
+
+# For conv1d embedder
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
 # embedding_shape = torch.Size([1, 749])
-# sample_shape = torch.Size([n_channels, input_window_samples])
-# myHNBCI = HyperBCINet(model, embedding_shape, sample_shape)
 
-# # Send myHNBCI to GPU
-# if cuda:
-#     myHNBCI.cuda()
+# For EEGConformerembedder
+embedding_shape = torch.Size([32])
+my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
+
+weight_shape = model.final_layer.conv_classifier.weight.shape
+my_hypernet = LinearHypernet(embedding_shape, weight_shape)
+
+myHNBCI = HyperBCINet(
+    model, 
+    my_embedder,
+    embedding_shape, 
+    sample_shape,
+    my_hypernet    
+)
+
+# Send myHNBCI to GPU
+if cuda:
+    model.cuda()
+    myHNBCI.cuda()
 
 ### ----------------------------------- MODEL TRAINING -----------------------------------
 # these parameters work for the original ShallowFBSCP Net
@@ -118,14 +139,21 @@ if torch.cuda.device_count() > 1:
 lr = 0.0002
 weight_decay = 0
 batch_size = 72
-n_epochs = 300
+n_epochs = 200
 
 optimizer = torch.optim.AdamW(
-    model.parameters(),
+    myHNBCI.parameters(),
     lr=lr, 
     # weight_decay=weight_decay,
     betas = (0.5, 0.999)
 )
+
+# optimizer = torch.optim.AdamW(
+#     model.parameters(),
+#     lr=lr, 
+#     # weight_decay=weight_decay,
+#     betas = (0.5, 0.999)
+# )
 
 # optimizer = torch.optim.AdamW(
 #     myHNBCI.parameters(),
@@ -155,30 +183,9 @@ test_acc_lst = []
 for epoch in range(1, n_epochs + 1):
     print(f"Epoch {epoch}/{n_epochs}: ", end="")
 
-    # train_loss, train_accuracy = train_one_epoch(
-    #     train_loader, 
-    #     myHNBCI, 
-    #     loss_fn, 
-    #     optimizer, 
-    #     scheduler, 
-    #     epoch, 
-    #     device,
-    #     print_batch_stats=False
-    # )
-
-    # # Update weight tensor for each evaluation pass
-    # myHNBCI.calibrate()
-    # test_loss, test_accuracy = test_model(
-    #     test_loader, 
-    #     myHNBCI, 
-    #     loss_fn,
-    #     print_batch_stats=False
-    # )
-    # myHNBCI.calibrating = False
-
     train_loss, train_accuracy = train_one_epoch(
         train_loader, 
-        model, 
+        myHNBCI, 
         loss_fn, 
         optimizer, 
         scheduler, 
@@ -187,12 +194,33 @@ for epoch in range(1, n_epochs + 1):
         print_batch_stats=False
     )
 
+    # Update weight tensor for each evaluation pass
+    myHNBCI.calibrate()
     test_loss, test_accuracy = test_model(
         test_loader, 
-        model, 
+        myHNBCI, 
         loss_fn,
         print_batch_stats=False
     )
+    myHNBCI.calibrating = False
+
+    # train_loss, train_accuracy = train_one_epoch(
+    #     train_loader, 
+    #     model, 
+    #     loss_fn, 
+    #     optimizer, 
+    #     scheduler, 
+    #     epoch, 
+    #     device,
+    #     print_batch_stats=False
+    # )
+
+    # test_loss, test_accuracy = test_model(
+    #     test_loader, 
+    #     model, 
+    #     loss_fn,
+    #     print_batch_stats=False
+    # )
 
     print(
         f"Train Accuracy: {100 * train_accuracy:.2f}%, "
