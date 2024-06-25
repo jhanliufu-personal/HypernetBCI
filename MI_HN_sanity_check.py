@@ -115,7 +115,7 @@ if cuda:
 lr = 0.0002
 weight_decay = 0
 batch_size = 72
-n_epochs = 2000
+n_epochs = 300
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
