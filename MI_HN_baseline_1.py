@@ -25,7 +25,7 @@ import pickle
 import numpy as np
 from torch.utils.data import DataLoader
 from models.HypernetBCI import HyperBCINet
-from models.Embedder import ShallowFBCSPEmbedder
+from models.Embedder import ShallowFBCSPEmbedder, EEGConformerEmbedder
 from models.Hypernet import LinearHypernet
 
 from utils import (
@@ -170,13 +170,19 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
                 cur_model.cuda()
 
             ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
+            sample_shape = torch.Size([n_chans, input_window_samples])
+
+            # For conv1d embedder
             # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
             # embedding_shape = torch.Size([1, 749])
-            # this is the input shape of the final layer of ShallowFBCSPNet
-            embedding_shape = torch.Size([40, 144, 1])
 
-            sample_shape = torch.Size([n_chans, input_window_samples])
-            my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+            # For ShallowFBCSP-based embedder
+            # this is the input shape of the final layer of ShallowFBCSPNet
+            # embedding_shape = torch.Size([40, 144, 1])
+            # my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+
+            embedding_shape = torch.Size([32])
+            my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 
             weight_shape = cur_model.final_layer.conv_classifier.weight.shape
             my_hypernet = LinearHypernet(embedding_shape, weight_shape)
@@ -196,8 +202,11 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
         
             optimizer = torch.optim.AdamW(
                 myHNBCI.parameters(),
-                lr=args.lr, 
-                weight_decay=args.weight_decay)
+                lr = args.lr, 
+                # weight_decay=args.weight_decay,
+                # This is for EEGConformer
+                betas = (0.5, 0.999)
+            )
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer,
                 T_max=args.n_epochs - 1

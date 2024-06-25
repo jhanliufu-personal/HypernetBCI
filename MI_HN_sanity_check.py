@@ -94,6 +94,9 @@ model = EEGConformer(
 # Send model to GPU
 if cuda:
     model.cuda()
+# Parallelize training if possible
+if torch.cuda.device_count() > 1:
+    model = torch.nn.DataParallel(model)
 
 ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
@@ -211,6 +214,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 3')
+plt.title('HypernetBCI sanity check 4')
 
-plt.savefig(f'{dir_results}HN_sanity_test_3.png')
+plt.savefig(f'{dir_results}HN_sanity_test_4.png')
