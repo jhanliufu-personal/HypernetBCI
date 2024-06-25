@@ -181,6 +181,7 @@ for subj_id, subj_dataset in windows_dataset.split('subject').items():
             # embedding_shape = torch.Size([40, 144, 1])
             # my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
 
+            # For EEGConformer-based embedder
             embedding_shape = torch.Size([32])
             my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 

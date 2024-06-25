@@ -30,7 +30,7 @@ from utils import (
     train_one_epoch, test_model
 )
 from models.HypernetBCI import HyperBCINet
-from models.Embedder import ShallowFBCSPEmbedder
+from models.Embedder import ShallowFBCSPEmbedder, EEGConformerEmbedder
 from models.Hypernet import LinearHypernet
 
 import warnings
@@ -149,10 +149,16 @@ for holdout_subj_id in subject_ids_lst:
     pretrain_curve_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png')
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
 
+    # For conv1d embedder
     # # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
     # embedding_shape = torch.Size([1, 749])
+
+    # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
-    embedding_shape = torch.Size([40, 144, 1])
+    # embedding_shape = torch.Size([40, 144, 1])
+
+    # For EEGConformer-based embedder
+    embedding_shape = torch.Size([32])
 
     sample_shape = torch.Size([n_chans, input_window_samples])
     
@@ -168,7 +174,8 @@ for holdout_subj_id in subject_ids_lst:
         )
                     
         ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
-        pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+        # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+        pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
         weight_shape = cur_model.final_layer.conv_classifier.weight.shape
         pretrain_hypernet = LinearHypernet(embedding_shape, weight_shape)
         pretrain_HNBCI = HyperBCINet(
@@ -186,7 +193,10 @@ for holdout_subj_id in subject_ids_lst:
         optimizer = torch.optim.AdamW(
             pretrain_HNBCI.parameters(),
             lr=args.lr, 
-            weight_decay=args.weight_decay)
+            weight_decay=args.weight_decay,
+            # This is for EEGConformer
+            betas = (0.5, 0.999)
+        )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=args.n_epochs - 1
@@ -308,7 +318,8 @@ for holdout_subj_id in subject_ids_lst:
         **(args.model_kwargs)
     )
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
-    calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+    # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+    calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
     calibrate_HNBCI = HyperBCINet(
         calibrate_model, 
