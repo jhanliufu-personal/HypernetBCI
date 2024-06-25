@@ -1,5 +1,5 @@
 import torch
-from braindecode.models import ShallowFBCSPNet
+from braindecode.models import ShallowFBCSPNet, EEGConformer
 
 
 class Embedder(torch.nn.Module):
@@ -33,6 +33,37 @@ class Embedder(torch.nn.Module):
         """
         raise NotImplementedError("Each embedder must implement the forward method.")
 
+
+class EEGConformerEmbedder(Embedder):
+    def __init__(
+            self, 
+            sample_shape: torch.Size, 
+            embedding_shape: torch.Size,
+            n_classes: int,
+            sfreq: int
+        ) -> None:
+        super(EEGConformerEmbedder, self).__init__(sample_shape, embedding_shape)
+        # Contruct EEGConformer
+        self.model = EEGConformer(
+            n_classes=n_classes,
+            n_chans=self.sample_shape[0],
+            n_times=self.sample_shape[1],
+            sfreq=sfreq,
+            # return features that go into the classification layer
+            return_features=True,
+            # This is a magic number for Schirrmeister2017. 'auto' will
+            # cause error (dimension mismatch). need to figure this out 
+            final_fc_length=5760
+        )
+
+    def forward(self, x):
+        _, features = self.model(x)
+        assert (
+            features.shape[1:] == self.embedding_shape, 
+            f'output embedding has wrong shape ({features.shape[1:]}) ' +
+            f'correct embedding shape is {self.embedding_shape}'
+        )
+        return features
 
 class ShallowFBCSPEmbedder(Embedder):
     def __init__(
