@@ -66,7 +66,7 @@ train_set = splitted['0train']
 valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-os.environ["CUDA_VISIBLE_DEVICES"] = 1
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
