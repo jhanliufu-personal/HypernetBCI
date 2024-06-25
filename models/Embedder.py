@@ -45,7 +45,7 @@ class EEGConformerEmbedder(Embedder):
         super(EEGConformerEmbedder, self).__init__(sample_shape, embedding_shape)
         # Contruct EEGConformer
         self.model = EEGConformer(
-            n_classes=n_classes,
+            n_outputs=n_classes,
             n_chans=self.sample_shape[0],
             n_times=self.sample_shape[1],
             sfreq=sfreq,
@@ -58,11 +58,11 @@ class EEGConformerEmbedder(Embedder):
 
     def forward(self, x):
         _, features = self.model(x)
-        assert (
-            features.shape[1:] == self.embedding_shape, 
+        assert features.shape[1:] == self.embedding_shape, (
             f'output embedding has wrong shape ({features.shape[1:]}) ' +
             f'correct embedding shape is {self.embedding_shape}'
-        )
+            )
+        
         return features
 
 class ShallowFBCSPEmbedder(Embedder):
@@ -90,8 +90,7 @@ class ShallowFBCSPEmbedder(Embedder):
 
     def forward(self, x):
         _ = self.model(x)
-        assert (
-            self.output.shape[1:] == self.embedding_shape, 
+        assert self.output.shape[1:] == self.embedding_shape, (
             f'output embedding has wrong shape ({self.output.shape[1:]}) ' +
             f'correct embedding shape is {self.embedding_shape}'
         )

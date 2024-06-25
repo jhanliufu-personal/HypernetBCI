@@ -1,10 +1,5 @@
-# from torch.nn import Module
-# from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
-# from torch import nn
-# import math
 import numpy as np
-# from tqdm import tqdm
 from braindecode.datasets import MOABBDataset
 from braindecode.preprocessing import create_windows_from_events
 from braindecode.preprocessing import (
@@ -12,13 +7,12 @@ from braindecode.preprocessing import (
     preprocess,
     Preprocessor,
 )
-from braindecode.models import ShallowFBCSPNet
+from braindecode.models import ShallowFBCSPNet, EEGConformer
 from braindecode.util import set_random_seeds
 import torch
-# from itertools import chain
 import matplotlib.pyplot as plt
 
-from models.HypernetBCI import HyperBCINet
+# from models.HypernetBCI import HyperBCINet
 from utils import train_one_epoch, test_model
 
 subject_id = 3
@@ -82,11 +76,19 @@ classes = list(range(n_classes))
 n_channels = train_set[0][0].shape[0]
 input_window_samples = train_set[0][0].shape[1]
 
-model = ShallowFBCSPNet(
-    n_channels,
-    n_classes,
-    input_window_samples=input_window_samples,
-    final_conv_length="auto",
+# model = ShallowFBCSPNet(
+#     n_channels,
+#     n_classes,
+#     input_window_samples=input_window_samples,
+#     final_conv_length="auto",
+# )
+
+model = EEGConformer(
+    n_outputs=n_classes,
+    n_chans=n_channels,
+    n_times=input_window_samples,
+    sfreq=sfreq,
+    final_fc_length=5760
 )
 
 # Send model to GPU
@@ -95,28 +97,31 @@ if cuda:
 
 ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-embedding_shape = torch.Size([1, 749])
-sample_shape = torch.Size([n_channels, input_window_samples])
-myHNBCI = HyperBCINet(model, embedding_shape, sample_shape)
+# embedding_shape = torch.Size([1, 749])
+# sample_shape = torch.Size([n_channels, input_window_samples])
+# myHNBCI = HyperBCINet(model, embedding_shape, sample_shape)
 
-# Send myHNBCI to GPU
-if cuda:
-    myHNBCI.cuda()
+# # Send myHNBCI to GPU
+# if cuda:
+#     myHNBCI.cuda()
 
 ### ----------------------------------- MODEL TRAINING -----------------------------------
 # these parameters work for the original ShallowFBSCP Net
-lr = 0.0625 * 0.01
-weight_decay = 0
-batch_size = 64
-n_epochs = 20
+# lr = 0.0625 * 0.01
+# weight_decay = 0
+# batch_size = 64
+# n_epochs = 20
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(valid_set, batch_size=batch_size)
+lr = 0.0002
+weight_decay = 0
+batch_size = 72
+n_epochs = 2000
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
     lr=lr, 
-    weight_decay=weight_decay
+    # weight_decay=weight_decay,
+    betas = (0.5, 0.999)
 )
 
 # optimizer = torch.optim.AdamW(
@@ -138,6 +143,9 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     T_max=n_epochs - 1
 )
 loss_fn = torch.nn.NLLLoss()
+
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(valid_set, batch_size=batch_size)
 
 train_acc_lst = []
 test_acc_lst = []
@@ -203,6 +211,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 2')
+plt.title('HypernetBCI sanity check 3')
 
-plt.savefig(f'{dir_results}HN_sanity_test_2.png')
+plt.savefig(f'{dir_results}HN_sanity_test_3.png')
