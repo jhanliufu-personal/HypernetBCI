@@ -40,8 +40,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 8))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 8))
+subject_ids_lst = [1,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -193,12 +193,13 @@ for holdout_subj_id in subject_ids_lst:
     # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     
     # For EEGConformer-based embedder
-    embedding_shape = torch.Size([32])
+    embedding_shape = torch.Size([32,])
     pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
     if not model_exist:
+        print(f'Pretraining model for subject {holdout_subj_id}')
         ### ---------------------------- CREATE PRIMARY NETWORK ----------------------------
         cur_model = model_object(
             n_chans,
@@ -324,6 +325,9 @@ for holdout_subj_id in subject_ids_lst:
             },
             model_param_path
         )
+
+    else:
+        print(f'A pretrained model for subject {holdout_subj_id} exists')
 
     if args.only_pretrain:
         continue
