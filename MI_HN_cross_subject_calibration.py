@@ -155,6 +155,7 @@ results_columns = ['valid_accuracy',]
 dict_intermediate_outputs = {}
 
 for holdout_subj_id in subject_ids_lst:
+
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- PRETRAINING ------------------------------------
     ### -----------------------------------------------------------------------------------------
@@ -193,12 +194,10 @@ for holdout_subj_id in subject_ids_lst:
 
     if not model_exist:
         print(f'Pretraining model for subject {holdout_subj_id}')
-
         print(f'Hold out data from subject {holdout_subj_id}')
-        ### ---------- Split dataset into pre-train set and calibration (holdout) set ----------
+        ### ---------- Create pretrain dataset ----------
         pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in subject_ids_lst if i != holdout_subj_id])
-        calibrate_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
-
+        
         ### ---------------------------- CREATE PRIMARY NETWORK ----------------------------
         cur_model = model_object(
             n_chans,
@@ -336,6 +335,7 @@ for holdout_subj_id in subject_ids_lst:
     ### -----------------------------------------------------------------------------------------
 
     ### ----------------------------------- PREPARE CALIBRATION DATASETS -----------------------------------
+    calibrate_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
     ### THIS PART IS FOR BCNI2014001
     if args.dataset_name == 'BCNI2014001':
         calibrate_splitted_lst_by_run = list(calibrate_set.split('run').values())
