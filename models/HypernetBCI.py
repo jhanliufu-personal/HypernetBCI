@@ -122,6 +122,7 @@ class HyperBCINet(torch.nn.Module):
                 assert aggregated_weight_tensor.shape == self.weight_shape, "Weight tensor has incorrect shape"
 
                 # update weights
+                print('Update new tensor to model parameters')
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': aggregated_weight_tensor})
 
@@ -130,5 +131,5 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
-        print('Forward pass using functional call')
+        # print('Forward pass using functional call')
         return functional_call(self.primary_net, self.primary_params, x)

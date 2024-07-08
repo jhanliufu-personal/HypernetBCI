@@ -264,7 +264,7 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 def test_model(
     dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda", **forward_pass_kwargs
 ):
-    print('Test model!')
+    # print('Test model!')
     size = len(dataloader.dataset)
     n_batches = len(dataloader)
     model.eval()  # Switch to evaluation mode
@@ -278,7 +278,6 @@ def test_model(
     for batch_idx, (X, y, _) in progress_bar:
         X, y = X.to(device), y.to(device)
         pred = model(X, **forward_pass_kwargs)
-        # pred = model(X, random_update=True)
         batch_loss = loss_fn(pred, y).item()
 
         test_loss += batch_loss

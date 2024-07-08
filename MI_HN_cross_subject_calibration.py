@@ -22,6 +22,7 @@ from scipy import stats
 import os
 import pickle
 import numpy as np
+from copy import deepcopy
 
 from torch.utils.data import DataLoader
 
@@ -330,7 +331,7 @@ for holdout_subj_id in subject_ids_lst:
     )
     pretrained_params = torch.load(model_param_path)
     calibrate_HNBCI.load_state_dict(pretrained_params['HN_params_dict'])
-    calibrate_HNBCI.primary_params = pretrained_params['primary_params']
+    calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
     # Send to GPU
     if cuda:
         calibrate_model.cuda()
@@ -367,7 +368,7 @@ for holdout_subj_id in subject_ids_lst:
 
             # Restore to the pre-trained state
             calibrate_HNBCI.load_state_dict(pretrained_params['HN_params_dict'])
-            calibrate_HNBCI.primary_params = pretrained_params['primary_params']
+            calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
             # Send to GPU
             if cuda:
                 calibrate_model.cuda()
