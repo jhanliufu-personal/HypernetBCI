@@ -397,7 +397,7 @@ for holdout_subj_id in subject_ids_lst:
     for calibrate_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
 
         test_accuracy_lst = []
-        embeddings_lst = []
+        # embeddings_lst = []
         # new_tensors_lst = []
         aggregated_tensor_lst = []
 
@@ -470,7 +470,7 @@ for holdout_subj_id in subject_ids_lst:
         dict_subj_intermediate_outputs.update(
             {
                 calibrate_data_amount: {
-                    'embeddings': embeddings_lst,
+                    # 'embeddings': embeddings_lst,
                     # 'weight_tensors': new_tensors_lst,
                     'aggregated_tensor': aggregated_tensor_lst
                 }
