@@ -37,6 +37,10 @@ class HyperBCINet(torch.nn.Module):
         """
         super(HyperBCINet, self).__init__()
 
+        ### ----------------------------------------------------------------------
+        '''
+        Hyperparameters
+        '''
         # The primary network and its parameters
         self.primary_net = primary_net
         # need this for functional forward call
@@ -56,14 +60,18 @@ class HyperBCINet(torch.nn.Module):
         self.weight_shape = primary_net.final_layer.conv_classifier.weight.shape
 
         # embedder
-        # self.embedder = Conv1dEmbedder(sample_shape, embedding_shape)
         self.embedder = embedder
 
         # hypernet / weight generator
-        # self.hypernet = LinearHypernet(embedding_shape, self.weight_shape)
         self.hypernet = hypernet
         ### ----------------------------------------------------------------------
-
+        '''
+        These are for saving intermediate outputs; embeddings and tensors
+        '''
+        self.embeddings = None
+        self.new_weight_tensors = None
+        self.aggregated_weight_tensor = None
+        ### ----------------------------------------------------------------------
         self.calibrating = False
 
     def calibrate(self) -> None:
@@ -111,20 +119,20 @@ class HyperBCINet(torch.nn.Module):
 
             print('Generate new embedding and weights')
             # generate embeddings
-            embeddings = self.embedder(x)
+            self.embeddings = self.embedder(x)
             # generate new weight tensors
-            new_weight_tensors = torch.stack([self.hypernet(emb) for emb in embeddings])
+            self.new_weight_tensors = torch.stack([self.hypernet(emb) for emb in self.embeddings])
 
             # aggregate the weight tensors if specified to
             if aggr is not None:
                 print('Aggregate weight tensors')
-                aggregated_weight_tensor = self.aggregate_tensors(new_weight_tensors, aggr=aggr)
-                assert aggregated_weight_tensor.shape == self.weight_shape, "Weight tensor has incorrect shape"
+                self.aggregated_weight_tensor = self.aggregate_tensors(self.new_weight_tensors, aggr=aggr)
+                assert self.aggregated_weight_tensor.shape == self.weight_shape, "Weight tensor has incorrect shape"
 
                 # update weights
                 print('Update new tensor to model parameters')
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
-                self.primary_params.update({'final_layer.conv_classifier.weight': aggregated_weight_tensor})
+                self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
 
             # else evaluate each input with its corresponding weight tensor
             else:
