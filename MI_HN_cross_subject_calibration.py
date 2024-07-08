@@ -398,7 +398,7 @@ for holdout_subj_id in subject_ids_lst:
 
         test_accuracy_lst = []
         embeddings_lst = []
-        new_tensors_lst = []
+        # new_tensors_lst = []
         aggregated_tensor_lst = []
 
         ### Since we're sampling randomly, repeat for 'repetition' times
@@ -442,7 +442,7 @@ for holdout_subj_id in subject_ids_lst:
 
             # Save intermediate outputs
             embeddings_lst.append(calibrate_HNBCI.embeddings)
-            new_tensors_lst.append(calibrate_HNBCI.new_weight_tensors)
+            # new_tensors_lst.append(calibrate_HNBCI.new_weight_tensors)
             aggregated_tensor_lst.append(calibrate_HNBCI.aggregated_weight_tensor)
 
             # Test the calibrated model
@@ -471,7 +471,7 @@ for holdout_subj_id in subject_ids_lst:
             {
                 calibrate_data_amount: {
                     'embeddings': embeddings_lst,
-                    'weight_tensors': new_tensors_lst,
+                    # 'weight_tensors': new_tensors_lst,
                     'aggregated_tensor': aggregated_tensor_lst
                 }
             }
