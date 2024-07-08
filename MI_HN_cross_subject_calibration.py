@@ -441,7 +441,7 @@ for holdout_subj_id in subject_ids_lst:
             calibrate_HNBCI.calibrating = False
 
             # Save intermediate outputs
-            embeddings_lst.append(calibrate_HNBCI.embeddings)
+            # embeddings_lst.append(calibrate_HNBCI.embeddings)
             # new_tensors_lst.append(calibrate_HNBCI.new_weight_tensors)
             aggregated_tensor_lst.append(calibrate_HNBCI.aggregated_weight_tensor)
 
