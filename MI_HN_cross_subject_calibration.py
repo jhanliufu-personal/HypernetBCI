@@ -31,7 +31,7 @@ from utils import (
     train_one_epoch, test_model
 )
 from models.HypernetBCI import HyperBCINet
-from models.Embedder import ShallowFBCSPEmbedder, EEGConformerEmbedder
+from models.Embedder import Conv1dEmbedder, ShallowFBCSPEmbedder, EEGConformerEmbedder
 from models.Hypernet import LinearHypernet
 
 import warnings
@@ -40,18 +40,38 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
+subject_ids_lst = list(range(1, 8))
 # subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
 
-results_file_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
 dir_results = 'results/'
+experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
+results_file_name = f'{experiment_folder_name}_results'
+intermediate_outputs_file_name = f'{experiment_folder_name}_intermediate_outputs'
+accuracy_figure_file_name = f'{experiment_folder_name}_accuracy'
+results_file_path = os.path.join(
+    dir_results, 
+    f'{experiment_folder_name}/', 
+    f'{results_file_name}.pkl'
+)
+intermediate_outputs_file_path = os.path.join(
+    dir_results, 
+    f'{experiment_folder_name}/', 
+    f'{intermediate_outputs_file_name}.pkl'
+)
+accuracy_figure_file_path = os.path.join(
+    dir_results, 
+    f'{experiment_folder_name}/', 
+    f'{accuracy_figure_file_name}.png'
+)
+print(f'Saving results at {results_file_path}')
+print(f'Saving intermediate outputs at {intermediate_outputs_file_path}')
+print(f'Saving accuracy figure at {accuracy_figure_file_path}')
+
 # used to store pre-trained model parameters
 temp_exp_name = f'HN_xsubj_calibration_{args.experiment_version}_pretrain'
-file_path = os.path.join(dir_results, f'{results_file_name}.pkl')
-print(f'Saving results at {file_path}')
 
 ### ----------------------------- Plotting parameters -----------------------------
 match args.data_amount_unit:
@@ -132,11 +152,13 @@ splitted_by_subj = windows_dataset.split('subject')
 dict_results = {}
 results_columns = ['valid_accuracy',]
 
+dict_intermediate_outputs = {}
+
 for holdout_subj_id in subject_ids_lst:
     
     print(f'Hold out data from subject {holdout_subj_id}')
     
-    ### ---------- Split dataset into pre-train set and fine-tune (holdout) set ----------
+    ### ---------- Split dataset into pre-train set and calibration (holdout) set ----------
     pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in subject_ids_lst if i != holdout_subj_id])
     calibrate_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
 
@@ -146,22 +168,33 @@ for holdout_subj_id in subject_ids_lst:
 
     # temp_exp_name = 'HN_xsubj_calibration_1_pretrain'
     # Check if a pre-trained model exists
-    model_param_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth')
-    pretrain_curve_path = os.path.join(dir_results, f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png')
+    model_param_path = os.path.join(
+        dir_results, 
+        f'{experiment_folder_name}/',
+        f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth'
+    )
+    pretrain_curve_path = os.path.join(
+        dir_results, 
+        f'{experiment_folder_name}/',
+        f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png'
+    )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
+
+    sample_shape = torch.Size([n_chans, input_window_samples])
 
     # For conv1d embedder
     # # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
     # embedding_shape = torch.Size([1, 749])
+    # pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
     # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
     # embedding_shape = torch.Size([40, 144, 1])
-
+    # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+    
     # For EEGConformer-based embedder
     embedding_shape = torch.Size([32])
-
-    sample_shape = torch.Size([n_chans, input_window_samples])
+    pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
@@ -175,10 +208,10 @@ for holdout_subj_id in subject_ids_lst:
         )
                     
         ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
-        # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
-        pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
         weight_shape = cur_model.final_layer.conv_classifier.weight.shape
+
         pretrain_hypernet = LinearHypernet(embedding_shape, weight_shape)
+
         pretrain_HNBCI = HyperBCINet(
             cur_model, 
             pretrain_embedder,
@@ -318,10 +351,15 @@ for holdout_subj_id in subject_ids_lst:
         input_window_samples=input_window_samples,
         **(args.model_kwargs)
     )
+
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
+
+    # calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
     # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
+
     calibrate_HNBCI = HyperBCINet(
         calibrate_model, 
         calibrate_embedder,
@@ -351,11 +389,15 @@ for holdout_subj_id in subject_ids_lst:
 
     ### Calibrate with varying amount of new data
     dict_subj_results = {0: [calibrate_baseline_acc,]}
+    dict_subj_intermediate_outputs = {}
     calibrate_trials_num = len(subj_calibrate_set.get_metadata())
     for calibrate_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
 
         test_accuracy_lst = []
-        
+        embeddings_lst = []
+        new_tensors_lst = []
+        aggregated_tensor_lst = []
+
         ### Since we're sampling randomly, repeat for 'repetition' times
         for i in range(args.repetition):
 
@@ -395,6 +437,11 @@ for holdout_subj_id in subject_ids_lst:
             )
             calibrate_HNBCI.calibrating = False
 
+            # Save intermediate outputs
+            embeddings_lst.append(calibrate_HNBCI.embeddings)
+            new_tensors_lst.append(calibrate_HNBCI.new_weight_tensors)
+            aggregated_tensor_lst.append(calibrate_HNBCI.aggregated_weight_tensor)
+
             # Test the calibrated model
             test_loss, test_accuracy = test_model(
                 subj_valid_loader, 
@@ -402,6 +449,8 @@ for holdout_subj_id in subject_ids_lst:
                 loss_fn,
                 **(args.forward_pass_kwargs)
             )
+
+            # Save test accuracy
             test_accuracy_lst.append(test_accuracy)
 
             print(
@@ -415,27 +464,58 @@ for holdout_subj_id in subject_ids_lst:
             }
         )
 
+        dict_subj_intermediate_outputs.update(
+            {
+                calibrate_data_amount: {
+                    'embeddings': embeddings_lst,
+                    'weight_tensors': new_tensors_lst,
+                    'aggregated_tensor': aggregated_tensor_lst
+                }
+            }
+        )
+
     dict_results.update(
         {
             holdout_subj_id: dict_subj_results
         }
     )
+
+    dict_intermediate_outputs.update(
+        {
+            holdout_subj_id: dict_subj_intermediate_outputs
+        }
+    )
+
     ### ----------------------------- Save results -----------------------------
-    # Save results after done with a subject, in case server crashes
-    # remove existing results file if one exists
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # Save results and intermediate outputs after done with a subject, in case server crashes
+    # remove existing pickle file if one exists
+    if os.path.exists(results_file_path):
+        os.remove(results_file_path)
     # save the updated one
-    with open(file_path, 'wb') as f:
+    with open(results_file_path, 'wb') as f:
         pickle.dump(dict_results, f)
 
+    if os.path.exists(intermediate_outputs_file_path):
+        os.remove(intermediate_outputs_file_path)
+    # save the updated one
+    with open(intermediate_outputs_file_path, 'wb') as f:
+        pickle.dump(dict_intermediate_outputs, f)
+
 # check if results are saved correctly
-if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-    with open(file_path, 'rb') as f:
+if os.path.exists(results_file_path) and os.path.getsize(results_file_path) > 0:
+    with open(results_file_path, 'rb') as f:
         dummy = pickle.load(f)
-    print("Data was saved successfully.")
+    print("Results were saved successfully.")
 else:
-    print(f"Error: File '{file_path}' does not exist or is empty. The save was insuccesful")
+    print(f"Error: File '{results_file_path}' does not exist or is empty. The save was insuccesful")
+
+# check if intermediate outputs are saved correctly
+if os.path.exists(intermediate_outputs_file_path) and os.path.getsize(intermediate_outputs_file_path) > 0:
+    with open(intermediate_outputs_file_path, 'rb') as f:
+        dummy = pickle.load(f)
+    print("Intermediate outputs were saved successfully.")
+else:
+    print(f"Error: File '{intermediate_outputs_file_path}' does not exist or is empty. The save was insuccesful")
 
 ### -----------------------------------------------------------------------------------------
 ### ---------------------------------------- PLOTTING ---------------------------------------
@@ -492,4 +572,4 @@ plt.suptitle(
     'Calibrate model for each subject (cross subject calibration), ' +
     f'{args.repetition} reps each point'
 )
-plt.savefig(os.path.join(dir_results, f'{results_file_name}.png'))
+plt.savefig(accuracy_figure_file_path)
