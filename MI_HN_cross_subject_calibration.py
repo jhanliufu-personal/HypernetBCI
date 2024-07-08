@@ -183,12 +183,12 @@ for holdout_subj_id in subject_ids_lst:
 
     # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
-    embedding_shape = torch.Size([40, 144, 1])
-    pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+    # embedding_shape = torch.Size([40, 144, 1])
+    # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     
     # For EEGConformer-based embedder
-    # embedding_shape = torch.Size([32,])
-    # pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    embedding_shape = torch.Size([32,])
+    pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
@@ -358,8 +358,8 @@ for holdout_subj_id in subject_ids_lst:
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
 
     # calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
-    calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
-    # calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+    calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
 
