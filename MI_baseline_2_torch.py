@@ -38,8 +38,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -154,7 +154,6 @@ for holdout_subj_id in subject_ids_lst:
     print(f'Hold out data from subject {holdout_subj_id}')
     
     ### ---------- Split dataset into pre-train set and fine-tune (holdout) set ----------
-    pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in subject_ids_lst if i != holdout_subj_id])
     fine_tune_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
 
     ### -----------------------------------------------------------------------------------------
@@ -185,6 +184,7 @@ for holdout_subj_id in subject_ids_lst:
         print(f'Hold out data from subject {holdout_subj_id}')
 
         ### ---------- Split pre-train set into pre-train-train set and pre-train-test set ----------
+        pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in subject_ids_lst if i != holdout_subj_id])
         ### THIS PART IS FOR BCNI2014001
         if args.dataset_name == 'BCNI2014001':
             pre_train_train_set_lst = []
