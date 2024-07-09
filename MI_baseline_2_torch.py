@@ -38,8 +38,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2,]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -360,7 +360,7 @@ for holdout_subj_id in subject_ids_lst:
 
             # Continue training / fine tuning
             print(
-                f'Fine tuning model for subject {holdout_subj_id}' +
+                f'Fine tuning model for subject {holdout_subj_id} ' +
                 f'with {len(cur_finetune_subj_train_subset)} trials (repetition {i})' +
                 f'with lr = {args.fine_tune_lr:.5f}'
             )
