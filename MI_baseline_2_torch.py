@@ -318,6 +318,7 @@ for holdout_subj_id in subject_ids_lst:
     if cuda:
         finetune_model.cuda()
 
+    loss_fn = torch.nn.NLLLoss()
     _, finetune_baseline_acc = test_model(finetune_subj_valid_loader, finetune_model, loss_fn)
     print(f'Before fine tuning for subject {holdout_subj_id}, the baseline accuracy is {finetune_baseline_acc}')
 
