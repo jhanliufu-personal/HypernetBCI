@@ -399,7 +399,7 @@ for holdout_subj_id in subject_ids_lst:
         
             final_accuracy_lst.append(np.mean(test_accuracy_lst[-5:]))
             # Save weights of the classifier after fine tuning
-            final_tensor_lst.append(finetune_model.final_layer.conv_classifier.weight)
+            final_tensor_lst.append(finetune_model.final_layer.conv_classifier.weight.clone().detach())
 
         dict_subj_results.update(
             {
