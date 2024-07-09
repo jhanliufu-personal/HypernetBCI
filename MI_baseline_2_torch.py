@@ -373,6 +373,7 @@ for holdout_subj_id in subject_ids_lst:
                 finetune_optimizer,
                 T_max=args.fine_tune_n_epochs - 1
             )
+            loss_fn = torch.nn.NLLLoss()
 
             test_accuracy_lst = []
             for epoch in range(1, args.fine_tune_n_epochs + 1):
