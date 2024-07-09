@@ -268,6 +268,9 @@ for holdout_subj_id in subject_ids_lst:
                 f"Average Test Loss: {test_loss:.6f}\n"
             )
 
+            pretrain_train_acc_lst.append(train_accuracy)
+            pretrain_test_acc_lst.append(test_accuracy)
+
         # Plot and save the pretraining curve
         plt.figure()
         plt.plot(pretrain_train_acc_lst, label='Training accuracy')
@@ -311,6 +314,10 @@ for holdout_subj_id in subject_ids_lst:
         **(args.model_kwargs)
     )
     finetune_model.load_state_dict(torch.load(model_param_path))
+    # Send model to GPU
+    if cuda:
+        finetune_model.cuda()
+
     _, finetune_baseline_acc = test_model(finetune_subj_valid_loader, finetune_model, loss_fn)
     print(f'Before fine tuning for subject {holdout_subj_id}, the baseline accuracy is {finetune_baseline_acc}')
 
