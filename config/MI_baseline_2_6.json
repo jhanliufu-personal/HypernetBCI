@@ -9,8 +9,8 @@
         "final_conv_length": "auto"
     },
     "data_amount_start": 0,
-    "data_amount_step": 40,
-    "repetition": 3, 
+    "data_amount_step": 80,
+    "repetition": 1, 
     "n_classes": 4,
     "lr": 0.065e-2,
     "fine_tune_lr": 0.065e-2,
