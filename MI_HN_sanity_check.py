@@ -1,5 +1,7 @@
 from torch.utils.data import DataLoader
 import numpy as np
+from itertools import chain
+
 from braindecode.datasets import MOABBDataset
 from braindecode.preprocessing import create_windows_from_events
 from braindecode.preprocessing import (
@@ -86,6 +88,11 @@ model = ShallowFBCSPNet(
     input_window_samples=input_window_samples,
     final_conv_length="auto",
 )
+# Load pretrained model params
+dir_results = 'results'
+load_model_param_from_exp = 'ShallowFBCSPNet_Schirrmeister2017_finetune_6'
+model_param_path = f'{dir_results}/{load_model_param_from_exp}/baseline_2_6_pretrain_without_subj_{subject_id}_model_params.pth'
+model.load_state_dict(torch.load(model_param_path))
 
 # model = EEGConformer(
 #     n_outputs=n_classes,
@@ -141,12 +148,12 @@ weight_decay = 0
 batch_size = 72
 n_epochs = 200
 
-optimizer = torch.optim.AdamW(
-    myHNBCI.parameters(),
-    lr=lr, 
-    # weight_decay=weight_decay,
-    betas = (0.5, 0.999)
-)
+# optimizer = torch.optim.AdamW(
+#     myHNBCI.parameters(),
+#     lr=lr, 
+#     # weight_decay=weight_decay,
+#     betas = (0.5, 0.999)
+# )
 
 # optimizer = torch.optim.AdamW(
 #     model.parameters(),
@@ -161,13 +168,14 @@ optimizer = torch.optim.AdamW(
 #     weight_decay=weight_decay
 # )
 
-# optimizer = torch.optim.Adam(
-#     chain(
-#         myHNBCI.hypernet.parameters(), 
-#         myHNBCI.embedder.parameters()
-#     ), 
-#     lr=1e-3
-# )
+optimizer = torch.optim.Adam(
+    chain(
+        myHNBCI.hypernet.parameters(), 
+        myHNBCI.embedder.parameters()
+    ), 
+    lr=lr,
+    betas = (0.5, 0.999)
+)
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     optimizer,
@@ -190,7 +198,7 @@ for epoch in range(1, n_epochs + 1):
         optimizer, 
         scheduler, 
         epoch, 
-        device,
+        # device,
         print_batch_stats=False
     )
 
@@ -233,7 +241,6 @@ for epoch in range(1, n_epochs + 1):
     test_acc_lst.append(test_accuracy)
 
 ### ----------------------------------- PLOT RESULTS -----------------------------------
-dir_results = 'results/'
 
 plt.figure()
 plt.plot(train_acc_lst, label='Training accuracy')
@@ -242,6 +249,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 4')
+plt.title('HypernetBCI sanity check 5')
 
-plt.savefig(f'{dir_results}HN_sanity_test_4.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_5.png')
