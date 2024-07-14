@@ -15,6 +15,9 @@ data/
 # Ignore jupyter notebooks
 notebooks/
 
+# Ignore pretrained models, manually transfer if need be
+pretrained/
+
 # Distribution / packaging
 .Python
 build/

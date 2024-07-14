@@ -112,7 +112,6 @@ class HyperBCINet(torch.nn.Module):
             if random_update:
                 print('Update weight tensor to RANDOM TENSOR')
                 random_weight_tensor = torch.randn(self.weight_shape).cuda()
-                # random_weight_tensor.cuda()
                 self.primary_params.update({'final_layer.conv_classifier.weight': random_weight_tensor})
                 print('Functional call using RANDOM WEIGHT TENSOR')
                 return functional_call(self.primary_net, self.primary_params, x)
@@ -131,6 +130,7 @@ class HyperBCINet(torch.nn.Module):
 
                 # update weights
                 print('Update new tensor to model parameters')
+                # print(self.aggregated_weight_tensor)
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
 
