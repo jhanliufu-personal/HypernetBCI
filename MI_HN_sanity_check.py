@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from itertools import chain
 
-from braindecode.datasets import MOABBDataset
+from braindecode.datasets import MOABBDataset, BaseConcatDataset
 from braindecode.preprocessing import create_windows_from_events
 from braindecode.preprocessing import (
     exponential_moving_standardize,
@@ -21,7 +21,10 @@ from utils import train_one_epoch, test_model
 import os
 
 subject_id = 3
-dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
+# dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
+# Load data from all subjects
+all_subject_id_lst = list(range(1, 14))
+dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
 
 ### ----------------------------------- PREPROCESSING -----------------------------------
 # low cut frequency for filtering
@@ -63,9 +66,9 @@ windows_dataset = create_windows_from_events(
 )
 
 ### ----------------------------------- GET DATASET -----------------------------------
-splitted = windows_dataset.split('run')
-train_set = splitted['0train']  
-valid_set = splitted['1test'] 
+# splitted = windows_dataset.split('run')
+# train_set = splitted['0train']  
+# valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
@@ -79,8 +82,8 @@ set_random_seeds(seed=seed, cuda=cuda)
 
 n_classes = 4
 classes = list(range(n_classes))
-n_channels = train_set[0][0].shape[0]
-input_window_samples = train_set[0][0].shape[1]
+n_channels = windows_dataset[0][0].shape[0]
+input_window_samples = windows_dataset[0][0].shape[1]
 
 model = ShallowFBCSPNet(
     n_channels,
@@ -183,8 +186,23 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
 )
 loss_fn = torch.nn.NLLLoss()
 
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(valid_set, batch_size=batch_size)
+# train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+# test_loader = DataLoader(valid_set, batch_size=batch_size)
+splitted_by_subj = windows_dataset.split('subject')
+pre_train_set = BaseConcatDataset([splitted_by_subj.get(f'{i}') for i in all_subject_id_lst if i != subject_id])
+pre_train_train_set_lst = []
+pre_train_test_set_lst = []
+for key, val in pre_train_set.split('subject').items():
+    subj_splitted_by_run = val.split('run')
+    cur_train_set = subj_splitted_by_run.get('0train')
+    pre_train_train_set_lst.append(cur_train_set)
+    cur_test_set = subj_splitted_by_run.get('1test')
+    pre_train_test_set_lst.append(cur_test_set)
+
+pre_train_train_set = BaseConcatDataset(pre_train_train_set_lst)
+pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
+pre_train_train_loader = DataLoader(pre_train_train_set, batch_size=batch_size, shuffle=True)
+pre_train_test_loader = DataLoader(pre_train_test_set, batch_size=batch_size)
 
 train_acc_lst = []
 test_acc_lst = []
@@ -192,7 +210,8 @@ for epoch in range(1, n_epochs + 1):
     print(f"Epoch {epoch}/{n_epochs}: ", end="")
 
     train_loss, train_accuracy = train_one_epoch(
-        train_loader, 
+        # train_loader, 
+        pre_train_train_loader,
         myHNBCI, 
         loss_fn, 
         optimizer, 
@@ -205,7 +224,8 @@ for epoch in range(1, n_epochs + 1):
     # Update weight tensor for each evaluation pass
     myHNBCI.calibrate()
     test_loss, test_accuracy = test_model(
-        test_loader, 
+        # test_loader,
+        pre_train_test_loader, 
         myHNBCI, 
         loss_fn,
         print_batch_stats=False
