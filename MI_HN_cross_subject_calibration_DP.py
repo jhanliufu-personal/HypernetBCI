@@ -265,7 +265,8 @@ for holdout_subj_id in subject_ids_lst:
             if device_count > 1:
                 pretrain_HNBCI = torch.nn.DataParallel(pretrain_HNBCI)
             # cur_model.cuda()
-            pretrain_HNBCI.cuda("1")
+            pretrain_HNBCI.cuda("cuda:1")
+            # retrain_HNBCI.set_device(1)
 
         # optimizer = torch.optim.AdamW(
         #     pretrain_HNBCI.parameters(),
