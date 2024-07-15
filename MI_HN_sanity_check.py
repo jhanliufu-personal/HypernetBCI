@@ -71,7 +71,7 @@ windows_dataset = create_windows_from_events(
 # valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
