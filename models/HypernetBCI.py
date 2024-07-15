@@ -111,7 +111,7 @@ class HyperBCINet(torch.nn.Module):
             # the computation graph. backprop won't reach them.
             if random_update:
                 print('Update weight tensor to RANDOM TENSOR')
-                random_weight_tensor = torch.randn(self.weight_shape).cuda()
+                random_weight_tensor = torch.randn(self.weight_shape).cuda() # buggy for DP
                 self.primary_params.update({'final_layer.conv_classifier.weight': random_weight_tensor})
                 print('Functional call using RANDOM WEIGHT TENSOR')
                 return functional_call(self.primary_net, self.primary_params, x)
@@ -141,6 +141,7 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
+        print(f'Primary net on device {self.primary_net.device}')
         if x.device != self.aggregated_weight_tensor.device:
             print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
         elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
