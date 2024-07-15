@@ -49,6 +49,9 @@ print('Data loaded')
 
 dir_results = 'results/'
 experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
+# Create expriment folder
+os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
+
 results_file_name = f'{experiment_folder_name}_results'
 intermediate_outputs_file_name = f'{experiment_folder_name}_intermediate_outputs'
 accuracy_figure_file_name = f'{experiment_folder_name}_accuracy'
