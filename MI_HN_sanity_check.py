@@ -117,13 +117,13 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 
 # For conv1d embedder
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-embedding_shape = torch.Size([1, 749])
-my_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+# embedding_shape = torch.Size([1, 749])
+# my_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
 # For ShallowFBCSP-based embedder
 # this is the input shape of the final layer of ShallowFBCSPNet
-# embedding_shape = torch.Size([40, 144, 1])
-# my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
+embedding_shape = torch.Size([40, 144, 1])
+my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
 
 # For EEGConformerembedder
 # embedding_shape = torch.Size([32])
@@ -276,6 +276,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 7')
+plt.title('HypernetBCI sanity check 6')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_7.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_6.png')
