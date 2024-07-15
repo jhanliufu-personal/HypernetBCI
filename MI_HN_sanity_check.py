@@ -276,6 +276,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 6')
+plt.title('HypernetBCI sanity check 8')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_6.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_8.png')
