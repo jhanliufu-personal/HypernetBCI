@@ -52,9 +52,15 @@ experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_cali
 # Create expriment folder
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 
+pretrain_file_name = f'{experiment_folder_name}_pretrain_acc'
 results_file_name = f'{experiment_folder_name}_results'
 intermediate_outputs_file_name = f'{experiment_folder_name}_intermediate_outputs'
 accuracy_figure_file_name = f'{experiment_folder_name}_accuracy'
+pretrain_file_path = os.path.join(
+    dir_results, 
+    f'{experiment_folder_name}/', 
+    f'{pretrain_file_name}.pkl'
+)
 results_file_path = os.path.join(
     dir_results, 
     f'{experiment_folder_name}/', 
@@ -70,6 +76,7 @@ accuracy_figure_file_path = os.path.join(
     f'{experiment_folder_name}/', 
     f'{accuracy_figure_file_name}.png'
 )
+print(f'Saving pretrain accuracy at {pretrain_file_path}')
 print(f'Saving results at {results_file_path}')
 print(f'Saving intermediate outputs at {intermediate_outputs_file_path}')
 print(f'Saving accuracy figure at {accuracy_figure_file_path}')
@@ -133,9 +140,10 @@ windows_dataset = create_windows_from_events(
 # Specify which GPU to run on to avoid collisions
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
 
-cuda = torch.cuda.is_available() 
+cuda = torch.cuda.is_available()
+device_count = torch.cuda.device_count()
 if cuda:
-    print('CUDA available, use GPU for training')
+    print(f'{device_count} CUDA devices available, use GPU for training')
     torch.backends.cudnn.benchmark = True
     device = 'cuda'
 else:
@@ -153,11 +161,16 @@ input_window_samples = windows_dataset[0][0].shape[1]
 
 splitted_by_subj = windows_dataset.split('subject')
 
+dict_pretrain = {}
 dict_results = {}
 results_columns = ['valid_accuracy',]
 dict_intermediate_outputs = {}
 
-# Load existing results and intermediate outputs if they exist
+# Load existing outputs if they exist
+if os.path.exists(pretrain_file_path):
+    with open(pretrain_file_path, 'rb') as f:
+        dict_pretrain = pickle.load(f)
+
 if os.path.exists(results_file_path):
     with open(results_file_path, 'rb') as f:
         dict_results = pickle.load(f)
@@ -190,6 +203,8 @@ for holdout_subj_id in subject_ids_lst:
         f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png'
     )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
+    # Also check if the pretrain accuracy has been saved
+    model_exist = model_exist and (dict_pretrain.get(holdout_subj_id) is not None)
 
     sample_shape = torch.Size([n_chans, input_window_samples])
 
@@ -247,7 +262,9 @@ for holdout_subj_id in subject_ids_lst:
         )
         # Send to GPU
         if cuda:
-            cur_model.cuda()
+            if device_count > 1:
+                pretrain_HNBCI = torch.nn.DataParallel(pretrain_HNBCI)
+            # cur_model.cuda()
             pretrain_HNBCI.cuda()
 
         # optimizer = torch.optim.AdamW(
@@ -353,6 +370,18 @@ for holdout_subj_id in subject_ids_lst:
         plt.title(f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve')
         plt.savefig(pretrain_curve_path)
 
+        # Save the pretrain accuracy
+        dict_pretrain.update({
+            holdout_subj_id: {
+                'pretrain_test_acc': pretrain_test_acc_lst,
+                'pretrain_train_acc': pretrain_train_acc_lst
+            }
+        })
+        if os.path.exists(pretrain_file_path):
+            os.remove(pretrain_file_path)
+        with open(pretrain_file_path, 'wb') as f:
+            pickle.dump(dict_pretrain, f)
+
         # Save the pre-trained model parameters to a file
         torch.save(
             {
@@ -413,7 +442,9 @@ for holdout_subj_id in subject_ids_lst:
     calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
     # Send to GPU
     if cuda:
-        calibrate_model.cuda()
+        if device_count > 1:
+            calibrate_HNBCI = torch.nn.DataParallel(calibrate_HNBCI)
+        # calibrate_model.cuda()
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
@@ -454,7 +485,7 @@ for holdout_subj_id in subject_ids_lst:
             calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
             # Send to GPU
             if cuda:
-                calibrate_model.cuda()
+                # calibrate_model.cuda()
                 calibrate_HNBCI.cuda()
     
             ### CALIBRATE! PASS IN THE ENTIRE SUBSET
