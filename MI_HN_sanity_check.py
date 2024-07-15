@@ -20,7 +20,7 @@ from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
 import os
 
-subject_id = 3
+subject_id = 7
 # dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
 # Load data from all subjects
 all_subject_id_lst = list(range(1, 14))
