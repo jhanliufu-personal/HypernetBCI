@@ -171,6 +171,7 @@ for holdout_subj_id in subject_ids_lst:
     if (dict_results.get(holdout_subj_id) is not None 
         and dict_intermediate_outputs.get(holdout_subj_id) is not None):
         print(f'Experiment for subject {holdout_subj_id} already done.')
+        continue
 
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- PRETRAINING ------------------------------------
