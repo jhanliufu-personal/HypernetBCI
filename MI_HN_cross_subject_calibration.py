@@ -155,10 +155,22 @@ splitted_by_subj = windows_dataset.split('subject')
 
 dict_results = {}
 results_columns = ['valid_accuracy',]
-
 dict_intermediate_outputs = {}
 
+# Load existing results and intermediate outputs if they exist
+if os.path.exists(results_file_path):
+    with open(results_file_path, 'rb') as f:
+        dict_results = pickle.load(f)
+
+if os.path.exists(intermediate_outputs_file_path):
+    with open(intermediate_outputs_file_path, 'rb') as f:
+        dict_intermediate_outputs = pickle.load(f)
+
 for holdout_subj_id in subject_ids_lst:
+
+    if (dict_results.get(holdout_subj_id) is not None 
+        and dict_intermediate_outputs.get(holdout_subj_id) is not None):
+        print(f'Experiment for subject {holdout_subj_id} already done.')
 
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- PRETRAINING ------------------------------------
