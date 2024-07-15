@@ -20,7 +20,7 @@ from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
 import os
 
-subject_id = 7
+subject_id = 3
 # dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
 # Load data from all subjects
 all_subject_id_lst = list(range(1, 14))
@@ -71,7 +71,7 @@ windows_dataset = create_windows_from_events(
 # valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
@@ -117,12 +117,13 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 
 # For conv1d embedder
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-# embedding_shape = torch.Size([1, 749])
+embedding_shape = torch.Size([1, 749])
+my_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
 # For ShallowFBCSP-based embedder
 # this is the input shape of the final layer of ShallowFBCSPNet
-embedding_shape = torch.Size([40, 144, 1])
-my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
+# embedding_shape = torch.Size([40, 144, 1])
+# my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
 
 # For EEGConformerembedder
 # embedding_shape = torch.Size([32])
@@ -151,6 +152,7 @@ weight_decay = 0
 batch_size = 64
 n_epochs = 30
 
+# these are for EEGConformer
 # lr = 0.0002
 # weight_decay = 0
 # batch_size = 72
@@ -274,6 +276,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 6')
+plt.title('HypernetBCI sanity check 7')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_6.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_7.png')
