@@ -132,8 +132,6 @@ class HyperBCINet(torch.nn.Module):
                 # update weights
                 print('Update new tensor to model parameters')
                 # print(f'Aggregated tensor on device {self.aggregated_weight_tensor.device}')
-                # print(self.aggregated_weight_tensor)
-                # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
 
             # else evaluate each input with its corresponding weight tensor
@@ -141,7 +139,7 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
-        print(f'Primary net on device {self.primary_net.device}')
+        # print(f'Primary net on device {self.primary_net.device}')
         if x.device != self.aggregated_weight_tensor.device:
             print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
         elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
