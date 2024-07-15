@@ -118,6 +118,7 @@ class HyperBCINet(torch.nn.Module):
 
             print('Generate new embedding and weights')
             # generate embeddings
+            print(f'Input x on device {x.device}')
             self.embeddings = self.embedder(x)
             # generate new weight tensors
             self.new_weight_tensors = torch.stack([self.hypernet(emb) for emb in self.embeddings])
@@ -130,6 +131,7 @@ class HyperBCINet(torch.nn.Module):
 
                 # update weights
                 print('Update new tensor to model parameters')
+                print(f'Aggregated tensor on device {self.aggregate_tensors.device}')
                 # print(self.aggregated_weight_tensor)
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
