@@ -15,7 +15,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.HypernetBCI import HyperBCINet
-from models.Embedder import EEGConformerEmbedder
+from models.Embedder import EEGConformerEmbedder, ShallowFBCSPEmbedder
 from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
 import os
@@ -71,7 +71,7 @@ windows_dataset = create_windows_from_events(
 # valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
@@ -119,9 +119,14 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
 # embedding_shape = torch.Size([1, 749])
 
+# For ShallowFBCSP-based embedder
+# this is the input shape of the final layer of ShallowFBCSPNet
+embedding_shape = torch.Size([40, 144, 1])
+my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+
 # For EEGConformerembedder
-embedding_shape = torch.Size([32])
-my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
+# embedding_shape = torch.Size([32])
+# my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
 
 weight_shape = model.final_layer.conv_classifier.weight.shape
 my_hypernet = LinearHypernet(embedding_shape, weight_shape)
@@ -141,15 +146,15 @@ if cuda:
 
 ### ----------------------------------- MODEL TRAINING -----------------------------------
 # these parameters work for the original ShallowFBSCP Net
-# lr = 0.0625 * 0.01
-# weight_decay = 0
-# batch_size = 64
-# n_epochs = 20
-
-lr = 0.0002
+lr = 0.0625 * 0.01
 weight_decay = 0
-batch_size = 72
-n_epochs = 200
+batch_size = 64
+n_epochs = 30
+
+# lr = 0.0002
+# weight_decay = 0
+# batch_size = 72
+# n_epochs = 200
 
 # optimizer = torch.optim.AdamW(
 #     myHNBCI.parameters(),
@@ -177,7 +182,7 @@ optimizer = torch.optim.Adam(
         myHNBCI.embedder.parameters()
     ), 
     lr=lr,
-    betas = (0.5, 0.999)
+    # betas = (0.5, 0.999)
 )
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -269,6 +274,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 5')
+plt.title('HypernetBCI sanity check 6')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_5.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_6.png')

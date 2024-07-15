@@ -23,6 +23,7 @@ import os
 import pickle
 import numpy as np
 from copy import deepcopy
+from itertools import chain
 
 from torch.utils.data import DataLoader
 
@@ -178,8 +179,8 @@ for holdout_subj_id in subject_ids_lst:
 
     # For conv1d embedder
     # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-    embedding_shape = torch.Size([1, 749])
-    pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # embedding_shape = torch.Size([1, 749])
+    # pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
     # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
@@ -187,8 +188,8 @@ for holdout_subj_id in subject_ids_lst:
     # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     
     # For EEGConformer-based embedder
-    # embedding_shape = torch.Size([32,])
-    # pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    embedding_shape = torch.Size([32,])
+    pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
@@ -204,6 +205,16 @@ for holdout_subj_id in subject_ids_lst:
             args.n_classes,
             input_window_samples=input_window_samples,
             **(args.model_kwargs)
+        )
+        # Load model parameters trained without hypernet
+        cur_model.load_state_dict(
+            torch.load(
+                os.path.join(
+                    dir_results, 
+                    f'ShallowFBCSPNet_Schirrmeister2017_finetune_6/',
+                    f'baseline_2_6_pretrain_without_subj_{holdout_subj_id}_model_params.pth'
+                )
+            )
         )
                     
         ### ----------------------------------- CREATE HYPERNET BCI -----------------------------------
@@ -223,8 +234,19 @@ for holdout_subj_id in subject_ids_lst:
             cur_model.cuda()
             pretrain_HNBCI.cuda()
 
+        # optimizer = torch.optim.AdamW(
+        #     pretrain_HNBCI.parameters(),
+        #     lr=args.lr, 
+        #     weight_decay=args.weight_decay,
+        #     # This is for EEGConformer
+        #     betas = (0.5, 0.999)
+        # )
         optimizer = torch.optim.AdamW(
-            pretrain_HNBCI.parameters(),
+            # Only backprop to hypernet and embedder.
+            chain(
+                pretrain_HNBCI.hypernet.parameters(), 
+                pretrain_HNBCI.embedder.parameters()
+            ),
             lr=args.lr, 
             weight_decay=args.weight_decay,
             # This is for EEGConformer
