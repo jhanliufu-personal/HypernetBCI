@@ -144,7 +144,7 @@ class HyperBCINet(torch.nn.Module):
         if x.device != self.aggregated_weight_tensor.device:
             print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
         elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
-            print(f'x on device {x.device}, other tensor in primary params on device {self.primary_params.get('conv_time_spat.conv_time.weight').device}')
+            print(f"x on device {x.device}, other tensor in primary params on device {self.primary_params.get('conv_time_spat.conv_time.weight').device}")
 
         # print('Forward pass using functional call')
         return functional_call(self.primary_net, self.primary_params, x)
