@@ -141,5 +141,8 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
+        if x.device != self.aggregated_weight_tensor.device:
+            print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
+
         # print('Forward pass using functional call')
         return functional_call(self.primary_net, self.primary_params, x)
