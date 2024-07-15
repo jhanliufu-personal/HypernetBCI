@@ -1,5 +1,5 @@
 {
-    "gpu_number": "1",
+    "gpu_number": "0",
     "model_name": "ShallowFBCSPNet",
     "dataset_name": "Schirrmeister2017",
     "experiment_version": 5,

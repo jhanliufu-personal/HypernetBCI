@@ -379,9 +379,9 @@ for holdout_subj_id in subject_ids_lst:
 
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
 
-    calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
     # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
-    # calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
 
