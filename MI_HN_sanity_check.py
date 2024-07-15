@@ -15,7 +15,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.HypernetBCI import HyperBCINet
-from models.Embedder import EEGConformerEmbedder, ShallowFBCSPEmbedder
+from models.Embedder import EEGConformerEmbedder, ShallowFBCSPEmbedder, Conv1dEmbedder
 from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
 import os
@@ -122,7 +122,7 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 # For ShallowFBCSP-based embedder
 # this is the input shape of the final layer of ShallowFBCSPNet
 embedding_shape = torch.Size([40, 144, 1])
-my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
+my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
 
 # For EEGConformerembedder
 # embedding_shape = torch.Size([32])
