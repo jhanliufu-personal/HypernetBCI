@@ -182,8 +182,8 @@ for holdout_subj_id in subject_ids_lst:
 
     # For conv1d embedder
     # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-    embedding_shape = torch.Size([1, 749])
-    pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # embedding_shape = torch.Size([1, 749])
+    # pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
     # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
@@ -191,8 +191,8 @@ for holdout_subj_id in subject_ids_lst:
     # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     
     # For EEGConformer-based embedder
-    # embedding_shape = torch.Size([32,])
-    # pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    embedding_shape = torch.Size([32,])
+    pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
@@ -253,7 +253,7 @@ for holdout_subj_id in subject_ids_lst:
             lr=args.lr, 
             weight_decay=args.weight_decay,
             # This is for EEGConformer
-            # betas = (0.5, 0.999)
+            betas = (0.5, 0.999)
         )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
@@ -382,9 +382,9 @@ for holdout_subj_id in subject_ids_lst:
 
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
 
-    calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
     # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
-    # calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
 
