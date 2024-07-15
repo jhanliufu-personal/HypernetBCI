@@ -41,8 +41,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2,]
 dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
 print('Data loaded')
@@ -145,7 +145,7 @@ device_count = torch.cuda.device_count()
 if cuda:
     print(f'{device_count} CUDA devices available, use GPU for training')
     torch.backends.cudnn.benchmark = True
-    device = 'cuda'
+    device = 'cuda:0'
 else:
     print('No CUDA available, use CPU for training')
     device = 'cpu'
@@ -262,6 +262,8 @@ for holdout_subj_id in subject_ids_lst:
         )
         # Send to GPU
         if cuda:
+            if device_count > 1:
+                pretrain_HNBCI = torch.nn.DataParallel(pretrain_HNBCI)
             # cur_model.cuda()
             pretrain_HNBCI.cuda()
 
@@ -275,8 +277,8 @@ for holdout_subj_id in subject_ids_lst:
         optimizer = torch.optim.AdamW(
             # Only backprop to hypernet and embedder.
             chain(
-                pretrain_HNBCI.hypernet.parameters(), 
-                pretrain_HNBCI.embedder.parameters()
+                pretrain_HNBCI.module.hypernet.parameters(), 
+                pretrain_HNBCI.module.embedder.parameters()
             ),
             lr=args.lr, 
             weight_decay=args.weight_decay,
@@ -383,8 +385,8 @@ for holdout_subj_id in subject_ids_lst:
         # Save the pre-trained model parameters to a file
         torch.save(
             {
-                'HN_params_dict': pretrain_HNBCI.state_dict(), 
-                'primary_params': pretrain_HNBCI.primary_params
+                'HN_params_dict': pretrain_HNBCI.module.state_dict(), 
+                'primary_params': pretrain_HNBCI.module.primary_params
             },
             model_param_path
         )
@@ -440,13 +442,15 @@ for holdout_subj_id in subject_ids_lst:
     calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
     # Send to GPU
     if cuda:
+        if device_count > 1:
+            calibrate_HNBCI = torch.nn.DataParallel(calibrate_HNBCI)
         # calibrate_model.cuda()
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
     # create validation dataloader
     subj_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
-    calibrate_HNBCI.calibrating = False
+    calibrate_HNBCI.module.calibrating = False
     _, calibrate_baseline_acc = test_model(
         subj_valid_loader, 
         calibrate_HNBCI, 
@@ -477,8 +481,8 @@ for holdout_subj_id in subject_ids_lst:
             )
 
             # Restore to the pre-trained state
-            calibrate_HNBCI.load_state_dict(pretrained_params['HN_params_dict'])
-            calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
+            calibrate_HNBCI.module.load_state_dict(pretrained_params['HN_params_dict'])
+            calibrate_HNBCI.module.primary_params = deepcopy(pretrained_params['primary_params'])
             # Send to GPU
             if cuda:
                 # calibrate_model.cuda()
