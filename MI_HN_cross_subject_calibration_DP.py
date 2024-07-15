@@ -96,28 +96,28 @@ match args.data_amount_unit:
         unit_multiplier = args.trial_len_sec
 
 ### ----------------------------- Preprocessing -----------------------------
-low_cut_hz = 4.  
-high_cut_hz = 38. 
-# Parameters for exponential moving standardization
-factor_new = 1e-3
-init_block_size = 1000
-# Factor to convert from V to uV
-factor = 1e6
+# low_cut_hz = 4.  
+# high_cut_hz = 38. 
+# # Parameters for exponential moving standardization
+# factor_new = 1e-3
+# init_block_size = 1000
+# # Factor to convert from V to uV
+# factor = 1e6
 
-preprocessors = [
-    # Keep EEG sensors
-    Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
-    # Convert from V to uV
-    Preprocessor(lambda data: multiply(data, factor)), 
-    # Bandpass filter
-    Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
-    # Exponential moving standardization
-    Preprocessor(exponential_moving_standardize,  
-                factor_new=factor_new, init_block_size=init_block_size)
-]
+# preprocessors = [
+#     # Keep EEG sensors
+#     Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
+#     # Convert from V to uV
+#     Preprocessor(lambda data: multiply(data, factor)), 
+#     # Bandpass filter
+#     Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
+#     # Exponential moving standardization
+#     Preprocessor(exponential_moving_standardize,  
+#                 factor_new=factor_new, init_block_size=init_block_size)
+# ]
 
-# Transform the data
-preprocess(dataset, preprocessors, n_jobs=-1)
+# # Transform the data
+# preprocess(dataset, preprocessors, n_jobs=-1)
 
 ### ----------------------------- Extract trial windows -----------------------------
 trial_start_offset_seconds = -0.5

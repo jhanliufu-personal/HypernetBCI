@@ -131,7 +131,7 @@ class HyperBCINet(torch.nn.Module):
 
                 # update weights
                 print('Update new tensor to model parameters')
-                print(f'Aggregated tensor on device {self.aggregate_tensors.device}')
+                print(f'Aggregated tensor on device {self.aggregated_weight_tensor.device}')
                 # print(self.aggregated_weight_tensor)
                 # self.primary_net.final_layer.conv_classifier.weight = nn.Parameter(aggregated_weight_tensor, requires_grad=False)
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
