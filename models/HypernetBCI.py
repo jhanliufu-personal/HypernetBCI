@@ -116,7 +116,7 @@ class HyperBCINet(torch.nn.Module):
                 print('Functional call using RANDOM WEIGHT TENSOR')
                 return functional_call(self.primary_net, self.primary_params, x)
 
-            print('Generate new embedding and weights')
+            # print('Generate new embedding and weights')
             # generate embeddings
             # print(f'Input x on device {x.device}')
             self.embeddings = self.embedder(x)
@@ -125,12 +125,12 @@ class HyperBCINet(torch.nn.Module):
 
             # aggregate the weight tensors if specified to
             if aggr is not None:
-                print('Aggregate weight tensors')
+                # print('Aggregate weight tensors')
                 self.aggregated_weight_tensor = self.aggregate_tensors(self.new_weight_tensors, aggr=aggr)
                 assert self.aggregated_weight_tensor.shape == self.weight_shape, "Weight tensor has incorrect shape"
 
                 # update weights
-                print('Update new tensor to model parameters')
+                # print('Update new tensor to model parameters')
                 # print(f'Aggregated tensor on device {self.aggregated_weight_tensor.device}')
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
 
@@ -139,11 +139,11 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
-        # print(f'Primary net on device {self.primary_net.device}')
-        if x.device != self.aggregated_weight_tensor.device:
-            print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
-        elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
-            print(f"x on device {x.device}, other tensor in primary params on device {self.primary_params.get('conv_time_spat.conv_time.weight').device}")
+        # # print(f'Primary net on device {self.primary_net.device}')
+        # if x.device != self.aggregated_weight_tensor.device:
+        #     print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
+        # elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
+        #     print(f"x on device {x.device}, other tensor in primary params on device {self.primary_params.get('conv_time_spat.conv_time.weight').device}")
 
         # print('Forward pass using functional call')
         return functional_call(self.primary_net, self.primary_params, x)
