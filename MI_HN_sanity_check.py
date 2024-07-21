@@ -124,10 +124,20 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 # this is the input shape of the final layer of ShallowFBCSPNet
 # embedding_shape = torch.Size([40, 144, 1])
 # my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
+# these parameters work for the original ShallowFBSCP Net
+# lr = 0.0625 * 0.01
+# weight_decay = 0
+# batch_size = 64
+# n_epochs = 30
 
 # For EEGConformerembedder
 embedding_shape = torch.Size([32])
 my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
+# these are for EEGConformer
+lr = 0.0002
+weight_decay = 0
+batch_size = 72
+n_epochs = 100
 
 weight_shape = model.final_layer.conv_classifier.weight.shape
 my_hypernet = LinearHypernet(embedding_shape, weight_shape)
@@ -146,18 +156,6 @@ if cuda:
     myHNBCI.cuda()
 
 ### ----------------------------------- MODEL TRAINING -----------------------------------
-# these parameters work for the original ShallowFBSCP Net
-# lr = 0.0625 * 0.01
-# weight_decay = 0
-# batch_size = 64
-# n_epochs = 30
-
-# these are for EEGConformer
-lr = 0.0002
-weight_decay = 0
-batch_size = 72
-n_epochs = 100
-
 # optimizer = torch.optim.AdamW(
 #     myHNBCI.parameters(),
 #     lr=lr, 
