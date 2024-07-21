@@ -23,7 +23,8 @@ import os
 subject_id = 3
 # dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
 # Load data from all subjects
-all_subject_id_lst = list(range(1, 14))
+# all_subject_id_lst = list(range(1, 14))
+all_subject_id_lst = [3, ]
 dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
 
 ### ----------------------------------- PREPROCESSING -----------------------------------
