@@ -71,7 +71,7 @@ windows_dataset = create_windows_from_events(
 # valid_set = splitted['1test'] 
 
 ### ----------------------------------- CREATE PRIMARY NETWORK -----------------------------------
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 cuda = torch.cuda.is_available() 
 device = "cuda" if cuda else "cpu"
 if cuda:
@@ -122,12 +122,12 @@ sample_shape = torch.Size([n_channels, input_window_samples])
 
 # For ShallowFBCSP-based embedder
 # this is the input shape of the final layer of ShallowFBCSPNet
-embedding_shape = torch.Size([40, 144, 1])
-my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
+# embedding_shape = torch.Size([40, 144, 1])
+# my_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', n_classes)
 
 # For EEGConformerembedder
-# embedding_shape = torch.Size([32])
-# my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
+embedding_shape = torch.Size([32])
+my_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, n_classes, sfreq)
 
 weight_shape = model.final_layer.conv_classifier.weight.shape
 my_hypernet = LinearHypernet(embedding_shape, weight_shape)
@@ -183,8 +183,8 @@ optimizer = torch.optim.Adam(
         myHNBCI.hypernet.parameters(), 
         myHNBCI.embedder.parameters()
     ), 
-    lr=lr,
-    # betas = (0.5, 0.999)
+    lr = lr,
+    betas = (0.5, 0.999)
 )
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -276,6 +276,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 8')
+plt.title('HypernetBCI sanity check 9')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_8.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_9.png')

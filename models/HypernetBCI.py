@@ -1,9 +1,6 @@
 import torch
 from torch.nn.utils.stateless import functional_call
-# from models.Embedder import Conv1dEmbedder
-# from models.Hypernet import LinearHypernet
-# from Embedder import Conv1dEmbedder
-# from Hypernet import LinearHypernet
+from copy import deepcopy
 
 
 class HyperBCINet(torch.nn.Module):
@@ -26,7 +23,8 @@ class HyperBCINet(torch.nn.Module):
             embedder:  torch.nn.Module,
             embedding_shape: torch.Size, 
             sample_shape: torch.Size,
-            hypernet: torch.nn.Module
+            hypernet: torch.nn.Module,
+            reference_tensor = None
         ) -> None:
         """
         Parameters
@@ -71,6 +69,16 @@ class HyperBCINet(torch.nn.Module):
         self.embeddings = None
         self.new_weight_tensors = None
         self.aggregated_weight_tensor = None
+
+        # reference tensor
+        if reference_tensor is not None:
+            self.reference_tensor = deepcopy(reference_tensor)
+        else:
+            # if not provided, use what the primary net comes with
+            self.reference_tensor = deepcopy(primary_net.final_layer.conv_classifier.weight)
+
+        self.distance_loss_func = torch.nn.MSELoss()
+
         ### ----------------------------------------------------------------------
         self.calibrating = False
 
@@ -94,6 +102,14 @@ class HyperBCINet(torch.nn.Module):
                 raise ValueError('Aggregation method is not defined.')
 
         return aggregated_tensor
+
+
+    def calculate_tensor_distance(self):
+        """
+        Calculate the distance between the generated tensor and a reference tensor
+        """
+        return self.distance_loss_func(self.reference_tensor, self.aggregated_weight_tensor)
+
 
     def forward(self, x, aggr='Avg', random_update=False):
         """

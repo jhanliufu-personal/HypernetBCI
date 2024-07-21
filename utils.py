@@ -217,12 +217,21 @@ Define a method for training one epoch. Adapted from
 https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_pytorch_and_pytorch_lightning.html
 '''
 def train_one_epoch(
-    dataloader: DataLoader, model: Module, loss_fn, optimizer,
-    scheduler: LRScheduler, epoch: int, device="cuda", print_batch_stats=False,
+    dataloader: DataLoader, 
+    model: Module, 
+    loss_fn, 
+    optimizer,
+    scheduler: LRScheduler, 
+    epoch: int, 
+    device="cuda", 
+    print_batch_stats=False,
+    regularize_tensor_distance=True,
+    regularization_coef=1,
     **forward_pass_kwargs
 ):
     print('Train model!')
-    model.train()  # Set the model to training mode
+    # Set the model to training mode
+    model.train()  
     train_loss, correct = 0, 0
 
     progress_bar = tqdm(enumerate(dataloader), total=len(dataloader),
@@ -232,10 +241,16 @@ def train_one_epoch(
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
         pred = model(X, **forward_pass_kwargs)
-        # pred = model(X, random_update=True)
         loss = loss_fn(pred, y)
+
+        if regularize_tensor_distance:
+            distance = model.calculate_tensor_distance()
+            print(f'Tensor distance loss to reference tensor is {distance:.6f}')
+            loss += regularization_coef * distance
+
         loss.backward()
-        optimizer.step()  # update the model weights
+        # update the model weights
+        optimizer.step()  
         optimizer.zero_grad()
 
         train_loss += loss.item()
@@ -243,7 +258,6 @@ def train_one_epoch(
 
         if print_batch_stats:
             progress_bar.set_description(
-                # f"Epoch {epoch}/{n_epochs}, "
                 f"Epoch {epoch}, "
                 f"Batch {batch_idx + 1}/{len(dataloader)}, "
                 f"Loss: {loss.item():.6f}"
@@ -262,12 +276,19 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 '''
 @torch.no_grad()
 def test_model(
-    dataloader: DataLoader, model: Module, loss_fn, print_batch_stats=True, device="cuda", **forward_pass_kwargs
+    dataloader: DataLoader, 
+    model: Module, 
+    loss_fn, 
+    print_batch_stats=True, 
+    regularize_tensor_distance=True,
+    regularization_coef=1,
+    device="cuda", 
+    **forward_pass_kwargs
 ):
-    # print('Test model!')
     size = len(dataloader.dataset)
     n_batches = len(dataloader)
-    model.eval()  # Switch to evaluation mode
+    # Switch to evaluation mode
+    model.eval()  
     test_loss, correct = 0, 0
 
     if print_batch_stats:
@@ -279,6 +300,11 @@ def test_model(
         X, y = X.to(device), y.to(device)
         pred = model(X, **forward_pass_kwargs)
         batch_loss = loss_fn(pred, y).item()
+
+        if regularize_tensor_distance:
+            distance = model.calculate_tensor_distance()
+            print(f'Tensor distance loss to reference tensor is {distance:.6f}')
+            batch_loss += regularization_coef * distance
 
         test_loss += batch_loss
         correct += (pred.argmax(1) == y).type(torch.float).sum().item()
