@@ -147,16 +147,16 @@ if cuda:
 
 ### ----------------------------------- MODEL TRAINING -----------------------------------
 # these parameters work for the original ShallowFBSCP Net
-lr = 0.0625 * 0.01
-weight_decay = 0
-batch_size = 64
-n_epochs = 30
+# lr = 0.0625 * 0.01
+# weight_decay = 0
+# batch_size = 64
+# n_epochs = 30
 
 # these are for EEGConformer
-# lr = 0.0002
-# weight_decay = 0
-# batch_size = 72
-# n_epochs = 200
+lr = 0.0002
+weight_decay = 0
+batch_size = 72
+n_epochs = 100
 
 # optimizer = torch.optim.AdamW(
 #     myHNBCI.parameters(),
