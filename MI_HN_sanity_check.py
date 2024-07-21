@@ -27,6 +27,8 @@ subject_id = 3
 all_subject_id_lst = [3, ]
 dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
 
+print('Dataset loaded')
+
 ### ----------------------------------- PREPROCESSING -----------------------------------
 # low cut frequency for filtering
 low_cut_hz = 4.0  
@@ -52,6 +54,7 @@ transforms = [
 
 # Transform the data
 preprocess(dataset, transforms, n_jobs=-1)
+print('Dataset preprocessed')
 
 ### ----------------------------------- GET TRIAL DATA -----------------------------------
 trial_start_offset_seconds = -0.5
