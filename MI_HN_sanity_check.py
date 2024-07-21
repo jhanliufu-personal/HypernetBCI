@@ -51,8 +51,8 @@ transforms = [
 ]
 
 # Transform the data
-preprocess(dataset, transforms, n_jobs=-1)
-# preprocess(dataset, transforms, n_jobs=1)
+# preprocess(dataset, transforms, n_jobs=-1)
+preprocess(dataset, transforms, n_jobs=1)
 print('Dataset preprocessed')
 
 ### ----------------------------------- GET TRIAL DATA -----------------------------------
