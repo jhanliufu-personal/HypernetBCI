@@ -40,21 +40,21 @@ init_block_size = 1000
 
 transforms = [
     Preprocessor("pick_types", eeg=True, meg=False, stim=False),  # Keep EEG sensors
-    # Preprocessor(
-    #     lambda data, factor: np.multiply(data, factor),  # Convert from V to uV
-    #     factor=1e6,
-    # ),
-    # Preprocessor("filter", l_freq=low_cut_hz, h_freq=high_cut_hz),  # Bandpass filter
-    # Preprocessor(
-    #     exponential_moving_standardize,  # Exponential moving standardization
-    #     factor_new=factor_new,
-    #     init_block_size=init_block_size,
-    # ),
+    Preprocessor(
+        lambda data, factor: np.multiply(data, factor),  # Convert from V to uV
+        factor=1e6,
+    ),
+    Preprocessor("filter", l_freq=low_cut_hz, h_freq=high_cut_hz),  # Bandpass filter
+    Preprocessor(
+        exponential_moving_standardize,  # Exponential moving standardization
+        factor_new=factor_new,
+        init_block_size=init_block_size,
+    ),
 ]
 
 # Transform the data
-# preprocess(dataset, transforms, n_jobs=-1)
-preprocess(dataset, transforms, n_jobs=1)
+preprocess(dataset, transforms, n_jobs=-1)
+# preprocess(dataset, transforms, n_jobs=1)
 print('Dataset preprocessed')
 
 ### ----------------------------------- GET TRIAL DATA -----------------------------------
