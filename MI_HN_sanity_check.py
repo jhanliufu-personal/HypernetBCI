@@ -20,10 +20,11 @@ from models.Hypernet import LinearHypernet
 from utils import train_one_epoch, test_model
 import os
 
-subject_id = 3
-# dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
+# subject_id = 3
+# # dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=[subject_id,])
+
 # Load data from all subjects
-all_subject_id_lst = list(range(1, 3))
+all_subject_id_lst = list(range(1, 14))
 dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
 
 print('Dataset loaded')
@@ -52,7 +53,8 @@ transforms = [
 ]
 
 # Transform the data
-preprocess(dataset, transforms, n_jobs=-1)
+# preprocess(dataset, transforms, n_jobs=-1)
+preprocess(dataset, transforms, n_jobs=1)
 print('Dataset preprocessed')
 
 ### ----------------------------------- GET TRIAL DATA -----------------------------------
