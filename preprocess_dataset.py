@@ -10,9 +10,10 @@ import numpy as np
 import os
 
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
+os.makedirs(preprocessed_dir, exist_ok=True)
 all_subject_id_lst = list(range(1, 14))
 
-if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
+if os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
     # If a preprocessed dataset exists
     dataset_loaded = load_concat_dataset(
