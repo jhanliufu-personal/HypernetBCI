@@ -56,6 +56,7 @@ if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
         ids_to_load = list(range(2 * subject_ids_lst[-1])),
         target_name = None,
     )
+    sfreq = windows_dataset.datasets[0].raw.info['sfreq']
     print('Preprocessed dataset loaded')
 else:
     dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
