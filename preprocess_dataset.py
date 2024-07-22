@@ -19,7 +19,7 @@ if os.listdir(preprocessed_dir):
     dataset_loaded = load_concat_dataset(
         path = preprocessed_dir,
         preload = True,
-        ids_to_load = all_subject_id_lst,
+        ids_to_load = list(range(2 * all_subject_id_lst[-1])),
         target_name = None,
     )
     print(f'Preprocessed dataset loaded from {preprocessed_dir}')

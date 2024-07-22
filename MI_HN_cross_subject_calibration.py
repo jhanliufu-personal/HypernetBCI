@@ -45,19 +45,17 @@ warnings.filterwarnings('ignore')
 args = parse_training_config()
 model_object = import_model(args.model_name)
 subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2, 3,]
 
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
     # If a preprocessed dataset exists
-    windows_dataset = load_concat_dataset(
+    dataset = load_concat_dataset(
         path = preprocessed_dir,
         preload = True,
-        ids_to_load = subject_ids_lst,
+        ids_to_load = list(range(2 * subject_ids_lst[-1])),
         target_name = None,
     )
-    sfreq = 500
     print('Preprocessed dataset loaded')
 else:
     dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
@@ -103,13 +101,14 @@ else:
         trial_stop_offset_samples=0,
         preload=True,
     )
+    print('Windows dataset created')
 
-    # # Save preprocessed dataset
-    # windows_dataset.save(
-    #     path=preprocessed_dir,
-    #     overwrite=True,
-    # )
-    # print(f'Dataset saved to {preprocessed_dir}')
+    # Save preprocessed dataset
+    windows_dataset.save(
+        path=preprocessed_dir,
+        overwrite=True,
+    )
+    print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
 experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
