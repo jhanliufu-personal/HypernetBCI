@@ -22,5 +22,5 @@
     "data_amount_unit": "min",
     "trial_len_sec": 4,
     "significance_level": 0.95,
-    "regularization_coef": 3
+    "regularization_coef": 10
 }
