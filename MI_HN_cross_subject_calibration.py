@@ -15,6 +15,7 @@ from braindecode.preprocessing import (Preprocessor,
                                        exponential_moving_standardize,
                                        preprocess)
 from braindecode.preprocessing import create_windows_from_events
+from braindecode.datautil import load_concat_dataset
 import torch
 from braindecode.util import set_random_seeds
 import pandas as pd
@@ -43,9 +44,52 @@ args = parse_training_config()
 model_object = import_model(args.model_name)
 subject_ids_lst = list(range(1, 14))
 # subject_ids_lst = [1, 2,]
-dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
-print('Data loaded')
+preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
+if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
+    print('Preprocessed dataset exists')
+    # If a preprocessed dataset exists
+    dataset = load_concat_dataset(
+        path = preprocessed_dir,
+        preload = True,
+        ids_to_load = subject_ids_lst,
+        target_name = None,
+    )
+    print('Preprocessed dataset loaded')
+else:
+    dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
+    print('Raw dataset loaded')
+
+    ### ----------------------------- Preprocessing -----------------------------
+    low_cut_hz = 4.  
+    high_cut_hz = 38. 
+    # Parameters for exponential moving standardization
+    factor_new = 1e-3
+    init_block_size = 1000
+    # Factor to convert from V to uV
+    factor = 1e6
+
+    preprocessors = [
+        # Keep EEG sensors
+        Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
+        # Convert from V to uV
+        Preprocessor(lambda data: multiply(data, factor)), 
+        # Bandpass filter
+        Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
+        # Exponential moving standardization
+        Preprocessor(exponential_moving_standardize,  
+                    factor_new=factor_new, init_block_size=init_block_size)
+    ]
+    # Transform the data
+    preprocess(dataset, preprocessors, n_jobs=-1)
+    print('Dataset preprocessed')
+
+    # Save preprocessed dataset
+    dataset.save(
+        path=preprocessed_dir,
+        overwrite=True,
+    )
+    print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
 experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
@@ -94,30 +138,6 @@ match args.data_amount_unit:
         unit_multiplier = args.trial_len_sec / 60
     case _:
         unit_multiplier = args.trial_len_sec
-
-### ----------------------------- Preprocessing -----------------------------
-low_cut_hz = 4.  
-high_cut_hz = 38. 
-# Parameters for exponential moving standardization
-factor_new = 1e-3
-init_block_size = 1000
-# Factor to convert from V to uV
-factor = 1e6
-
-preprocessors = [
-    # Keep EEG sensors
-    Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
-    # Convert from V to uV
-    Preprocessor(lambda data: multiply(data, factor)), 
-    # Bandpass filter
-    Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
-    # Exponential moving standardization
-    Preprocessor(exponential_moving_standardize,  
-                factor_new=factor_new, init_block_size=init_block_size)
-]
-
-# Transform the data
-preprocess(dataset, preprocessors, n_jobs=-1)
 
 ### ----------------------------- Extract trial windows -----------------------------
 trial_start_offset_seconds = -0.5
@@ -179,21 +199,12 @@ if os.path.exists(intermediate_outputs_file_path):
     with open(intermediate_outputs_file_path, 'rb') as f:
         dict_intermediate_outputs = pickle.load(f)
 
-# byte_to_GB = 1024 ** 3
-# total_memory = torch.cuda.get_device_properties(0).total_memory / byte_to_GB
-# reserved_memory = torch.cuda.memory_reserved(0) / byte_to_GB
-# used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-# print(f'{total_memory} GB available, {reserved_memory} GB reserved, {used_memory} GB used')
-
 for holdout_subj_id in subject_ids_lst:
 
     if (dict_results.get(holdout_subj_id) is not None 
         and dict_intermediate_outputs.get(holdout_subj_id) is not None):
         print(f'Experiment for subject {holdout_subj_id} already done.')
         continue
-
-    # # Keep track of memory usage
-    # subj_used_memory_lst = [used_memory,]
 
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- PRETRAINING ------------------------------------
@@ -218,8 +229,8 @@ for holdout_subj_id in subject_ids_lst:
 
     # For conv1d embedder
     # embedding length = 729 when conv1d kernel size = 5, stide = 3, input_window_samples = 2250
-    embedding_shape = torch.Size([1, 749])
-    pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # embedding_shape = torch.Size([1, 749])
+    # pretrain_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
 
     # For ShallowFBCSP-based embedder
     # this is the input shape of the final layer of ShallowFBCSPNet
@@ -227,8 +238,8 @@ for holdout_subj_id in subject_ids_lst:
     # pretrain_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
     
     # For EEGConformer-based embedder
-    # embedding_shape = torch.Size([32,])
-    # pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    embedding_shape = torch.Size([32,])
+    pretrain_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
     
     loss_fn = torch.nn.NLLLoss()
 
@@ -289,16 +300,12 @@ for holdout_subj_id in subject_ids_lst:
             lr=args.lr, 
             weight_decay=args.weight_decay,
             # This is for EEGConformer
-            # betas = (0.5, 0.999)
+            betas = (0.5, 0.999)
         )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=args.n_epochs - 1
         )
-
-        # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-        # print(f'After creating pretrain model, used memory {used_memory} GB')
-        # subj_used_memory_lst.append(used_memory)
 
         ### ---------------------------- PREPARE PRETRAIN DATASETS ----------------------------
         ### THIS PART IS FOR BCNI2014001
@@ -332,10 +339,6 @@ for holdout_subj_id in subject_ids_lst:
         pre_train_train_loader = DataLoader(pre_train_train_set, batch_size=args.batch_size, shuffle=True)
         pre_train_test_loader = DataLoader(pre_train_test_set, batch_size=args.batch_size)
 
-        # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-        # print(f'After creating pretrain datasets, used memory {used_memory} GB')
-        # subj_used_memory_lst.append(used_memory)
-
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
         for epoch in range(1, args.n_epochs + 1):
@@ -350,6 +353,7 @@ for holdout_subj_id in subject_ids_lst:
                 epoch, 
                 device,
                 print_batch_stats=False,
+                regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
             
@@ -360,6 +364,7 @@ for holdout_subj_id in subject_ids_lst:
                 pretrain_HNBCI, 
                 loss_fn,
                 print_batch_stats=False,
+                regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
             pretrain_HNBCI.calibrating = False
@@ -373,10 +378,6 @@ for holdout_subj_id in subject_ids_lst:
 
             pretrain_train_acc_lst.append(train_accuracy)
             pretrain_test_acc_lst.append(test_accuracy)
-
-            # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-            # print(f'After epoch {epoch}, used memory {used_memory} GB')
-            # subj_used_memory_lst.append(used_memory)
 
         # Plot and save the pretraining curve
         plt.figure()
@@ -419,9 +420,6 @@ for holdout_subj_id in subject_ids_lst:
     ### -----------------------------------------------------------------------------------------
     ### ---------------------------------------- CALIBRATION ------------------------------------
     ### -----------------------------------------------------------------------------------------
-    # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-    # print(f'Before calibration, used memory {used_memory} GB')
-    # subj_used_memory_lst.append(used_memory)
 
     ### ----------------------------------- PREPARE CALIBRATION DATASETS -----------------------------------
     calibrate_set = BaseConcatDataset([splitted_by_subj.get(f'{holdout_subj_id}'),])
@@ -446,9 +444,9 @@ for holdout_subj_id in subject_ids_lst:
 
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
 
-    calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
+    # calibrate_embedder = Conv1dEmbedder(sample_shape, embedding_shape)
     # calibrate_embedder = ShallowFBCSPEmbedder(sample_shape, embedding_shape, 'drop', args.n_classes)
-    # calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
+    calibrate_embedder = EEGConformerEmbedder(sample_shape, embedding_shape, args.n_classes, sfreq)
 
     calibrate_hypernet = LinearHypernet(embedding_shape, weight_shape)
 
@@ -464,22 +462,18 @@ for holdout_subj_id in subject_ids_lst:
     calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
     # Send to GPU
     if cuda:
-        # calibrate_model.cuda()
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
     # create validation dataloader
     subj_valid_loader = DataLoader(subj_valid_set, batch_size=args.batch_size)
 
-    # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-    # print(f'After creating the calibration datasets and model, used memory {used_memory} GB')
-    # subj_used_memory_lst.append(used_memory)
-
     calibrate_HNBCI.calibrating = False
     _, calibrate_baseline_acc = test_model(
         subj_valid_loader, 
         calibrate_HNBCI, 
         loss_fn, 
+        regularize_tensor_distance=False,
         **(args.forward_pass_kwargs)
     )
     print(f'Before calibrating for subject {holdout_subj_id}, the baseline accuracy is {calibrate_baseline_acc}')
@@ -491,8 +485,6 @@ for holdout_subj_id in subject_ids_lst:
     for calibrate_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
 
         test_accuracy_lst = []
-        # embeddings_lst = []
-        # new_tensors_lst = []
         aggregated_tensor_lst = []
 
         ### Since we're sampling randomly, repeat for 'repetition' times
@@ -530,13 +522,12 @@ for holdout_subj_id in subject_ids_lst:
                 subj_calibrate_loader, 
                 calibrate_HNBCI, 
                 loss_fn, 
+                regularize_tensor_distance=False,
                 **(args.forward_pass_kwargs)
             )
             calibrate_HNBCI.calibrating = False
 
             # Save intermediate outputs
-            # embeddings_lst.append(calibrate_HNBCI.embeddings)
-            # new_tensors_lst.append(calibrate_HNBCI.new_weight_tensors)
             aggregated_tensor_lst.append(calibrate_HNBCI.aggregated_weight_tensor)
 
             # Test the calibrated model
@@ -544,6 +535,7 @@ for holdout_subj_id in subject_ids_lst:
                 subj_valid_loader, 
                 calibrate_HNBCI, 
                 loss_fn,
+                regularize_tensor_distance=False,
                 **(args.forward_pass_kwargs)
             )
 
@@ -564,16 +556,10 @@ for holdout_subj_id in subject_ids_lst:
         dict_subj_intermediate_outputs.update(
             {
                 calibrate_data_amount: {
-                    # 'embeddings': embeddings_lst,
-                    # 'weight_tensors': new_tensors_lst,
                     'aggregated_tensor': aggregated_tensor_lst
                 }
             }
         )
-
-        # used_memory = torch.cuda.memory_allocated(0) / byte_to_GB
-        # print(f'After calibration with {calibrate_data_amount} trials of data, used memory {used_memory} GB')
-        # subj_used_memory_lst.append(used_memory)
 
     dict_results.update(
         {
@@ -586,17 +572,6 @@ for holdout_subj_id in subject_ids_lst:
             holdout_subj_id: dict_subj_intermediate_outputs
         }
     )
-
-    # ### Plot memory usage history for current subject
-    # plt.plot(subj_used_memory_lst)
-    # plt.axvline(x = args.n_epochs, ls='--', alpha=0.5, c='k')
-    # plt.savefig(
-    #     os.path.join(
-    #         dir_results, 
-    #         f'{experiment_folder_name}/',
-    #         f'{temp_exp_name}_subj_{holdout_subj_id}_memory_history.png'
-    # ))
-    # plt.close()
 
     ### ----------------------------- Save results -----------------------------
     # Save results and intermediate outputs after done with a subject, in case server crashes

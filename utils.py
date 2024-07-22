@@ -177,6 +177,7 @@ def parse_training_config():
     parser.add_argument('--fine_tune_freeze_layers_but', default=None, type=list)
 
     parser.add_argument('--forward_pass_kwargs', default=None)
+    parser.add_argument('--regularization_coef', default=1, type=float)
 
     args = parser.parse_args()
     with open(args.json, 'r') as f:
@@ -246,7 +247,7 @@ def train_one_epoch(
         if regularize_tensor_distance:
             distance = model.calculate_tensor_distance()
             distance_loss = regularization_coef * distance
-            print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+            # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
             loss += distance_loss
 
         loss.backward()
@@ -305,7 +306,7 @@ def test_model(
         if regularize_tensor_distance:
             distance = model.calculate_tensor_distance()
             distance_loss = regularization_coef * distance
-            print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+            # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
             batch_loss += distance_loss
 
         test_loss += batch_loss

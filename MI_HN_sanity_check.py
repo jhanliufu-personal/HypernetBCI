@@ -26,6 +26,7 @@ all_subject_id_lst = list(range(1, 14))
 
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
+    print('Preprocessed dataset exists')
     # If a preprocessed dataset exists
     dataset_loaded = load_concat_dataset(
         path = preprocessed_dir,
