@@ -50,7 +50,7 @@ preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
     # If a preprocessed dataset exists
-    dataset = load_concat_dataset(
+    windows_dataset = load_concat_dataset(
         path = preprocessed_dir,
         preload = True,
         ids_to_load = list(range(2 * subject_ids_lst[-1])),
@@ -182,8 +182,6 @@ n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
 splitted_by_subj = windows_dataset.split('subject')
-print('here')
-print(splitted_by_subj.keys())
 
 dict_pretrain = {}
 dict_results = {}
