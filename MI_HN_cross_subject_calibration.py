@@ -11,13 +11,17 @@ calibration set.
 import matplotlib.pyplot as plt
 from braindecode.datasets import MOABBDataset, BaseConcatDataset
 from numpy import multiply
-from braindecode.preprocessing import (Preprocessor,
-                                       exponential_moving_standardize,
-                                       preprocess)
-from braindecode.preprocessing import create_windows_from_events
+from braindecode.preprocessing import (
+    Preprocessor,
+    exponential_moving_standardize,
+    preprocess,
+    create_windows_from_events
+)
 from braindecode.datautil import load_concat_dataset
-import torch
 from braindecode.util import set_random_seeds
+
+import torch
+from torch.utils.data import DataLoader
 import pandas as pd
 from scipy import stats
 import os
@@ -25,8 +29,6 @@ import pickle
 import numpy as np
 from copy import deepcopy
 from itertools import chain
-
-from torch.utils.data import DataLoader
 
 from utils import (
     get_subset, import_model, parse_training_config, 
