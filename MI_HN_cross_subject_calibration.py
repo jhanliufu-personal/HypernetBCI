@@ -104,12 +104,12 @@ else:
         preload=True,
     )
 
-    # Save preprocessed dataset
-    windows_dataset.save(
-        path=preprocessed_dir,
-        overwrite=True,
-    )
-    print(f'Dataset saved to {preprocessed_dir}')
+    # # Save preprocessed dataset
+    # windows_dataset.save(
+    #     path=preprocessed_dir,
+    #     overwrite=True,
+    # )
+    # print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
 experiment_folder_name = f'HYPER{args.model_name}_{args.dataset_name}_xsubj_calib_{args.experiment_version}'
