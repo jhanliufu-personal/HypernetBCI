@@ -183,6 +183,8 @@ n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
 splitted_by_subj = windows_dataset.split('subject')
+print('here')
+print(splitted_by_subj.keys())
 
 dict_pretrain = {}
 dict_results = {}
