@@ -245,8 +245,9 @@ def train_one_epoch(
 
         if regularize_tensor_distance:
             distance = model.calculate_tensor_distance()
-            print(f'Tensor distance loss to reference tensor is {distance:.6f}')
-            loss += regularization_coef * distance
+            distance_loss = regularization_coef * distance
+            print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+            loss += distance_loss
 
         loss.backward()
         # update the model weights
@@ -303,8 +304,9 @@ def test_model(
 
         if regularize_tensor_distance:
             distance = model.calculate_tensor_distance()
-            print(f'Tensor distance loss to reference tensor is {distance:.6f}')
-            batch_loss += regularization_coef * distance
+            distance_loss = regularization_coef * distance
+            print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+            batch_loss += distance_loss
 
         test_loss += batch_loss
         correct += (pred.argmax(1) == y).type(torch.float).sum().item()

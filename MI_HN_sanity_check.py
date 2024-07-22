@@ -226,7 +226,8 @@ for epoch in range(1, n_epochs + 1):
         scheduler, 
         epoch, 
         # device,
-        print_batch_stats=False
+        print_batch_stats=False,
+        regularization_coef=10
     )
 
     # Update weight tensor for each evaluation pass
@@ -236,7 +237,8 @@ for epoch in range(1, n_epochs + 1):
         pre_train_test_loader, 
         myHNBCI, 
         loss_fn,
-        print_batch_stats=False
+        print_batch_stats=False,
+        regularization_coef=10
     )
     myHNBCI.calibrating = False
 
@@ -277,6 +279,6 @@ plt.legend()
 
 plt.xlabel('Training epochs')
 plt.ylabel('Accuracy')
-plt.title('HypernetBCI sanity check 9')
+plt.title('HypernetBCI sanity check 10')
 
-plt.savefig(f'{dir_results}/HN_sanity_test_9.png')
+plt.savefig(f'{dir_results}/HN_sanity_test_10.png')
