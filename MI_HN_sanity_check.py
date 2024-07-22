@@ -11,6 +11,7 @@ from braindecode.preprocessing import (
 )
 from braindecode.models import ShallowFBCSPNet #, EEGConformer
 from braindecode.util import set_random_seeds
+from braindecode.datautil import load_concat_dataset
 import torch
 import matplotlib.pyplot as plt
 
@@ -21,39 +22,54 @@ from utils import train_one_epoch, test_model
 import os
 
 subject_id = 3
-# Load data from all subjects
 all_subject_id_lst = list(range(1, 14))
-dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
 
-print('Dataset loaded')
+preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
+if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
+    # If a preprocessed dataset exists
+    dataset_loaded = load_concat_dataset(
+        path = preprocessed_dir,
+        preload = True,
+        ids_to_load = all_subject_id_lst,
+        target_name = None,
+    )
+    print('Preprocessed dataset loaded')
+else:
+    # Load data from all subjects
+    dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=all_subject_id_lst)
+    print('Raw dataset loaded')
 
-### ----------------------------------- PREPROCESSING -----------------------------------
-# low cut frequency for filtering
-low_cut_hz = 4.0  
-# high cut frequency for filtering
-high_cut_hz = 38.0  
-# Parameters for exponential moving standardization
-factor_new = 1e-3
-init_block_size = 1000
+    ### ----------------------------------- PREPROCESSING -----------------------------------
+    # low cut frequency for filtering
+    low_cut_hz = 4.0  
+    # high cut frequency for filtering
+    high_cut_hz = 38.0  
+    # Parameters for exponential moving standardization
+    factor_new = 1e-3
+    init_block_size = 1000
 
-transforms = [
-    Preprocessor("pick_types", eeg=True, meg=False, stim=False),  # Keep EEG sensors
-    Preprocessor(
-        lambda data, factor: np.multiply(data, factor),  # Convert from V to uV
-        factor=1e6,
-    ),
-    Preprocessor("filter", l_freq=low_cut_hz, h_freq=high_cut_hz),  # Bandpass filter
-    Preprocessor(
-        exponential_moving_standardize,  # Exponential moving standardization
-        factor_new=factor_new,
-        init_block_size=init_block_size,
-    ),
-]
+    transforms = [
+        Preprocessor("pick_types", eeg=True, meg=False, stim=False),  # Keep EEG sensors
+        Preprocessor(
+            lambda data, factor: np.multiply(data, factor),  # Convert from V to uV
+            factor=1e6,
+        ),
+        Preprocessor("filter", l_freq=low_cut_hz, h_freq=high_cut_hz),  # Bandpass filter
+        Preprocessor(
+            exponential_moving_standardize,  # Exponential moving standardization
+            factor_new=factor_new,
+            init_block_size=init_block_size,
+        ),
+    ]
 
-# Transform the data
-# preprocess(dataset, transforms, n_jobs=-1)
-preprocess(dataset, transforms, n_jobs=1)
-print('Dataset preprocessed')
+    # Transform the data
+    # preprocess(dataset, transforms, n_jobs=-1)
+    preprocess(dataset, transforms, n_jobs=1)
+    dataset.save(
+        path = preprocessed_dir,
+        overwrite = True,
+    )
+    print('Dataset preprocessed')
 
 ### ----------------------------------- GET TRIAL DATA -----------------------------------
 trial_start_offset_seconds = -0.5
