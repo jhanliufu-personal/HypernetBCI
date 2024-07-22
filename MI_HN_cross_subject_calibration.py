@@ -51,12 +51,13 @@ preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
     # If a preprocessed dataset exists
-    dataset = load_concat_dataset(
+    windows_dataset = load_concat_dataset(
         path = preprocessed_dir,
         preload = True,
         ids_to_load = subject_ids_lst,
         target_name = None,
     )
+    sfreq = 500
     print('Preprocessed dataset loaded')
 else:
     dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
@@ -86,8 +87,25 @@ else:
     preprocess(dataset, preprocessors, n_jobs=-1)
     print('Dataset preprocessed')
 
+    ### ----------------------------- Extract trial windows -----------------------------
+    trial_start_offset_seconds = -0.5
+    # Extract sampling frequency, check that they are same in all datasets
+    sfreq = dataset.datasets[0].raw.info['sfreq']
+    assert all([ds.raw.info['sfreq'] == sfreq for ds in dataset.datasets])
+    # Calculate the trial start offset in samples.
+    trial_start_offset_samples = int(trial_start_offset_seconds * sfreq)
+
+    # Create windows using braindecode function for this. It needs parameters to define how
+    # trials should be used.
+    windows_dataset = create_windows_from_events(
+        dataset,
+        trial_start_offset_samples=trial_start_offset_samples,
+        trial_stop_offset_samples=0,
+        preload=True,
+    )
+
     # Save preprocessed dataset
-    dataset.save(
+    windows_dataset.save(
         path=preprocessed_dir,
         overwrite=True,
     )
@@ -140,23 +158,6 @@ match args.data_amount_unit:
         unit_multiplier = args.trial_len_sec / 60
     case _:
         unit_multiplier = args.trial_len_sec
-
-### ----------------------------- Extract trial windows -----------------------------
-trial_start_offset_seconds = -0.5
-# Extract sampling frequency, check that they are same in all datasets
-sfreq = dataset.datasets[0].raw.info['sfreq']
-assert all([ds.raw.info['sfreq'] == sfreq for ds in dataset.datasets])
-# Calculate the trial start offset in samples.
-trial_start_offset_samples = int(trial_start_offset_seconds * sfreq)
-
-# Create windows using braindecode function for this. It needs parameters to define how
-# trials should be used.
-windows_dataset = create_windows_from_events(
-    dataset,
-    trial_start_offset_samples=trial_start_offset_samples,
-    trial_stop_offset_samples=0,
-    preload=True,
-)
 
 ### ----------------------------- Create model -----------------------------
 # Specify which GPU to run on to avoid collisions
