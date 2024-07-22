@@ -44,8 +44,8 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 model_object = import_model(args.model_name)
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2,]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2, 3,]
 
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
