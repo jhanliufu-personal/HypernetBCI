@@ -177,6 +177,8 @@ def parse_training_config():
     parser.add_argument('--fine_tune_freeze_layers_but', default=None, type=list)
 
     parser.add_argument('--forward_pass_kwargs', default=None)
+
+    parser.add_argument('--regularize_tensor_distance', default=True, type=bool)
     parser.add_argument('--regularization_coef', default=1, type=float)
 
     args = parser.parse_args()

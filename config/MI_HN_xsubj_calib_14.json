@@ -1,0 +1,26 @@
+{
+    "gpu_number": "2",
+    "model_name": "ShallowFBCSPNet",
+    "dataset_name": "Schirrmeister2017",
+    "experiment_version": 14,
+    "only_pretrain": false,
+    "model_kwargs":
+    {
+        "final_conv_length": "auto"
+    },
+    "forward_pass_kwargs":
+    {
+        "random_update": false
+    },
+    "data_amount_step": 40,
+    "repetition": 3, 
+    "n_classes": 4,
+    "lr": 0.0002,
+    "batch_size": 72,
+    "n_epochs": 50,
+    "weight_decay": 0,
+    "data_amount_unit": "min",
+    "trial_len_sec": 4,
+    "significance_level": 0.95,
+    "regularization_coef": 100
+}

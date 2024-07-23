@@ -356,6 +356,7 @@ for holdout_subj_id in subject_ids_lst:
                 epoch, 
                 device,
                 print_batch_stats=False,
+                regularize_tensor_distance=args.regularize_tensor_distance,
                 regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
@@ -367,6 +368,7 @@ for holdout_subj_id in subject_ids_lst:
                 pretrain_HNBCI, 
                 loss_fn,
                 print_batch_stats=False,
+                regularize_tensor_distance=args.regularize_tensor_distance,
                 regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
