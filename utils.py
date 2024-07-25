@@ -249,17 +249,16 @@ def train_one_epoch(
         optimizer.zero_grad()
         pred = model(X, **forward_pass_kwargs)
         
-        acc_loss = loss_fn(pred, y)
-        distance = model.calculate_tensor_distance()
-        distance_loss = regularization_coef * distance
-        loss = optimize_for_acc * acc_loss + regularize_tensor_distance * distance_loss
-
-        # loss = loss_fn(pred, y)
-        # if regularize_tensor_distance:
-        #     distance = model.calculate_tensor_distance()
-        #     distance_loss = regularization_coef * distance
-        #     # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
-        #     loss += distance_loss
+        if optimize_for_acc:
+            acc_loss = loss_fn(pred, y)
+        else:
+            acc_loss = 0
+        if regularize_tensor_distance:
+            distance = model.calculate_tensor_distance()
+            distance_loss = regularization_coef * distance
+        else:
+            distance_loss = 0
+        loss = acc_loss + distance_loss
 
         loss.backward()
         # update the model weights
@@ -314,10 +313,16 @@ def test_model(
         X, y = X.to(device), y.to(device)
         pred = model(X, **forward_pass_kwargs)
 
-        acc_loss = loss_fn(pred, y).item()
-        distance = model.calculate_tensor_distance()
-        distance_loss = regularization_coef * distance
-        batch_loss = optimize_for_acc * acc_loss + regularize_tensor_distance * distance_loss
+        if optimize_for_acc:
+            acc_loss = loss_fn(pred, y).item()
+        else:
+            acc_loss = 0
+        if regularize_tensor_distance:
+            distance = model.calculate_tensor_distance()
+            distance_loss = regularization_coef * distance
+        else:
+            distance_loss = 0
+        batch_loss = acc_loss + distance_loss
 
         # batch_loss = loss_fn(pred, y).item()
         # if regularize_tensor_distance:
