@@ -494,9 +494,9 @@ for holdout_subj_id in subject_ids_lst:
     ### Calibrate with varying amount of new data
     dict_subj_results = {0: [calibrate_baseline_acc,]}
     dict_subj_intermediate_outputs = {
-        0 : {
-            'tensor_distance': calibrate_HNBCI.calculate_tensor_distance()
-        }
+        # 0 : {
+        #     'tensor_distance': calibrate_HNBCI.calculate_tensor_distance()
+        # }
     }
 
     calibrate_trials_num = len(subj_calibrate_set.get_metadata())

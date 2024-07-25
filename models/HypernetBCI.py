@@ -62,14 +62,7 @@ class HyperBCINet(torch.nn.Module):
 
         # hypernet / weight generator
         self.hypernet = hypernet
-        ### ----------------------------------------------------------------------
-        '''
-        These are for saving intermediate outputs; embeddings and tensors
-        '''
-        self.embeddings = None
-        self.new_weight_tensors = None
-        self.aggregated_weight_tensor = None
-
+        
         # reference tensor
         if reference_tensor is not None:
             self.reference_tensor = deepcopy(reference_tensor)
@@ -78,6 +71,14 @@ class HyperBCINet(torch.nn.Module):
             self.reference_tensor = deepcopy(primary_net.final_layer.conv_classifier.weight)
 
         self.distance_loss_func = torch.nn.MSELoss()
+
+        ### ----------------------------------------------------------------------
+        '''
+        These are for saving intermediate outputs; embeddings and tensors
+        '''
+        self.embeddings = None
+        self.new_weight_tensors = None
+        self.aggregated_weight_tensor = None
 
         ### ----------------------------------------------------------------------
         self.calibrating = False
