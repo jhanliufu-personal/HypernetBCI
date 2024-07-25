@@ -178,6 +178,7 @@ def parse_training_config():
 
     parser.add_argument('--forward_pass_kwargs', default=None)
 
+    parser.add_argument('--optimize_for_acc', default=True, type=bool)
     parser.add_argument('--regularize_tensor_distance', default=True, type=bool)
     parser.add_argument('--regularization_coef', default=1, type=float)
 
@@ -228,11 +229,14 @@ def train_one_epoch(
     epoch: int, 
     device="cuda", 
     print_batch_stats=False,
-    regularize_tensor_distance=True,
+    optimize_for_acc=True,
+    regularize_tensor_distance=False,
     regularization_coef=1,
     **forward_pass_kwargs
 ):
-    print('Train model!')
+    # Have to include at least one loss term
+    assert optimize_for_acc or regularization_coef, "Must include at least one loss term"
+
     # Set the model to training mode
     model.train()  
     train_loss, correct = 0, 0
@@ -244,13 +248,18 @@ def train_one_epoch(
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
         pred = model(X, **forward_pass_kwargs)
-        loss = loss_fn(pred, y)
+        
+        acc_loss = loss_fn(pred, y)
+        distance = model.calculate_tensor_distance()
+        distance_loss = regularization_coef * distance
+        loss = optimize_for_acc * acc_loss + regularize_tensor_distance * distance_loss
 
-        if regularize_tensor_distance:
-            distance = model.calculate_tensor_distance()
-            distance_loss = regularization_coef * distance
-            # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
-            loss += distance_loss
+        # loss = loss_fn(pred, y)
+        # if regularize_tensor_distance:
+        #     distance = model.calculate_tensor_distance()
+        #     distance_loss = regularization_coef * distance
+        #     # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+        #     loss += distance_loss
 
         loss.backward()
         # update the model weights
@@ -284,7 +293,8 @@ def test_model(
     model: Module, 
     loss_fn, 
     print_batch_stats=True, 
-    regularize_tensor_distance=True,
+    optimize_for_acc=True,
+    regularize_tensor_distance=False,
     regularization_coef=1,
     device="cuda", 
     **forward_pass_kwargs
@@ -303,13 +313,18 @@ def test_model(
     for batch_idx, (X, y, _) in progress_bar:
         X, y = X.to(device), y.to(device)
         pred = model(X, **forward_pass_kwargs)
-        batch_loss = loss_fn(pred, y).item()
 
-        if regularize_tensor_distance:
-            distance = model.calculate_tensor_distance()
-            distance_loss = regularization_coef * distance
-            # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
-            batch_loss += distance_loss
+        acc_loss = loss_fn(pred, y).item()
+        distance = model.calculate_tensor_distance()
+        distance_loss = regularization_coef * distance
+        batch_loss = optimize_for_acc * acc_loss + regularize_tensor_distance * distance_loss
+
+        # batch_loss = loss_fn(pred, y).item()
+        # if regularize_tensor_distance:
+        #     distance = model.calculate_tensor_distance()
+        #     distance_loss = regularization_coef * distance
+        #     # print(f'Tensor distance loss to reference tensor is {distance_loss:.6f}')
+        #     batch_loss += distance_loss
 
         test_loss += batch_loss
         correct += (pred.argmax(1) == y).type(torch.float).sum().item()

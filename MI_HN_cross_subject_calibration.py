@@ -219,10 +219,10 @@ for holdout_subj_id in subject_ids_lst:
         f'{experiment_folder_name}/',
         f'{temp_exp_name}_without_subj_{holdout_subj_id}_model_params.pth'
     )
-    pretrain_curve_path = os.path.join(
+    pretrain_acc_curve_path = os.path.join(
         dir_results, 
         f'{experiment_folder_name}/',
-        f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve.png'
+        f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_acc_curve.png'
     )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
     # Also check if the pretrain accuracy has been saved
@@ -284,7 +284,7 @@ for holdout_subj_id in subject_ids_lst:
         )
         # Send to GPU
         if cuda:
-            # cur_model.cuda()
+            set_random_seeds(seed=seed, cuda=cuda)
             pretrain_HNBCI.cuda()
 
         # optimizer = torch.optim.AdamW(
@@ -344,6 +344,8 @@ for holdout_subj_id in subject_ids_lst:
 
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
+        train_tensor_distance_lst = []
+        test_tensor_distance_lst = []
         for epoch in range(1, args.n_epochs + 1):
             print(f"Epoch {epoch}/{args.n_epochs}: ", end="")
 
@@ -356,10 +358,13 @@ for holdout_subj_id in subject_ids_lst:
                 epoch, 
                 device,
                 print_batch_stats=False,
+                optimize_for_acc=args.optimize_for_acc,
                 regularize_tensor_distance=args.regularize_tensor_distance,
                 regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
+            pretrain_train_acc_lst.append(train_accuracy)
+            train_tensor_distance_lst.append(pretrain_HNBCI.calculate_tensor_distance())
             
             # Update weight tensor for each evaluation pass
             pretrain_HNBCI.calibrate()
@@ -368,11 +373,14 @@ for holdout_subj_id in subject_ids_lst:
                 pretrain_HNBCI, 
                 loss_fn,
                 print_batch_stats=False,
+                optimize_for_acc=args.optimize_for_acc,
                 regularize_tensor_distance=args.regularize_tensor_distance,
                 regularization_coef=args.regularization_coef,
                 **(args.forward_pass_kwargs)
             )
             pretrain_HNBCI.calibrating = False
+            pretrain_test_acc_lst.append(test_accuracy)
+            test_tensor_distance_lst.append(pretrain_HNBCI.calculate_tensor_distance())
 
             print(
                 f"Train Accuracy: {100 * train_accuracy:.2f}%, "
@@ -381,10 +389,7 @@ for holdout_subj_id in subject_ids_lst:
                 f"Average Test Loss: {test_loss:.6f}\n"
             )
 
-            pretrain_train_acc_lst.append(train_accuracy)
-            pretrain_test_acc_lst.append(test_accuracy)
-
-        # Plot and save the pretraining curve
+        # Plot and save the pretraining accuracy curves
         plt.figure()
         plt.plot(pretrain_train_acc_lst, label='Training accuracy')
         plt.plot(pretrain_test_acc_lst, label='Test accuracy')
@@ -392,14 +397,17 @@ for holdout_subj_id in subject_ids_lst:
         plt.xlabel('Training epochs')
         plt.ylabel('Accuracy')
         plt.title(f'{temp_exp_name}_without_subj_{holdout_subj_id}_pretrain_curve')
-        plt.savefig(pretrain_curve_path)
+        plt.tight_layout()
+        plt.savefig(pretrain_acc_curve_path)
         plt.close()
 
-        # Save the pretrain accuracy
+        # Save the pretrain accuracy and tensor distance
         dict_pretrain.update({
             holdout_subj_id: {
                 'pretrain_test_acc': pretrain_test_acc_lst,
-                'pretrain_train_acc': pretrain_train_acc_lst
+                'pretrain_train_acc': pretrain_train_acc_lst,
+                'train_tensor_distance': train_tensor_distance_lst,
+                'test_tensor_distance': test_tensor_distance_lst
             }
         })
         if os.path.exists(pretrain_file_path):
@@ -467,6 +475,7 @@ for holdout_subj_id in subject_ids_lst:
     calibrate_HNBCI.primary_params = deepcopy(pretrained_params['primary_params'])
     # Send to GPU
     if cuda:
+        set_random_seeds(seed=seed, cuda=cuda)
         calibrate_HNBCI.cuda()
 
     ### Calculate baseline accuracy of the uncalibrated model on the calibrate_valid set
@@ -478,19 +487,24 @@ for holdout_subj_id in subject_ids_lst:
         subj_valid_loader, 
         calibrate_HNBCI, 
         loss_fn, 
-        regularize_tensor_distance=False,
         **(args.forward_pass_kwargs)
     )
     print(f'Before calibrating for subject {holdout_subj_id}, the baseline accuracy is {calibrate_baseline_acc}')
 
     ### Calibrate with varying amount of new data
     dict_subj_results = {0: [calibrate_baseline_acc,]}
-    dict_subj_intermediate_outputs = {}
+    dict_subj_intermediate_outputs = {
+        0 : {
+            'tensor_distance': calibrate_HNBCI.calculate_tensor_distance()
+        }
+    }
+
     calibrate_trials_num = len(subj_calibrate_set.get_metadata())
     for calibrate_data_amount in np.arange(1, (calibrate_trials_num // args.data_amount_step) + 1) * args.data_amount_step:
 
         test_accuracy_lst = []
         aggregated_tensor_lst = []
+        tensor_distance_lst = []
 
         ### Since we're sampling randomly, repeat for 'repetition' times
         for i in range(args.repetition):
@@ -527,6 +541,7 @@ for holdout_subj_id in subject_ids_lst:
                 subj_calibrate_loader, 
                 calibrate_HNBCI, 
                 loss_fn, 
+                optimize_for_acc=True,
                 regularize_tensor_distance=False,
                 **(args.forward_pass_kwargs)
             )
@@ -534,12 +549,14 @@ for holdout_subj_id in subject_ids_lst:
 
             # Save intermediate outputs
             aggregated_tensor_lst.append(calibrate_HNBCI.aggregated_weight_tensor)
+            tensor_distance_lst.append(calibrate_HNBCI.calculate_tensor_distance())
 
             # Test the calibrated model
             test_loss, test_accuracy = test_model(
                 subj_valid_loader, 
                 calibrate_HNBCI, 
                 loss_fn,
+                optimize_for_acc=True,
                 regularize_tensor_distance=False,
                 **(args.forward_pass_kwargs)
             )
@@ -561,7 +578,8 @@ for holdout_subj_id in subject_ids_lst:
         dict_subj_intermediate_outputs.update(
             {
                 calibrate_data_amount: {
-                    'aggregated_tensor': aggregated_tensor_lst
+                    'aggregated_tensor': aggregated_tensor_lst,
+                    'tensor_distance': tensor_distance_lst
                 }
             }
         )
@@ -664,4 +682,5 @@ plt.suptitle(
     'Calibrate model for each subject (cross subject calibration), ' +
     f'{args.repetition} reps each point'
 )
+plt.tight_layout()
 plt.savefig(accuracy_figure_file_path)
