@@ -454,6 +454,16 @@ for holdout_subj_id in subject_ids_lst:
         input_window_samples=input_window_samples,
         **(args.model_kwargs)
     )
+    # Load model parameters trained without hypernet
+    cur_model.load_state_dict(
+        torch.load(
+            os.path.join(
+                dir_results, 
+                f'ShallowFBCSPNet_Schirrmeister2017_finetune_6/',
+                f'baseline_2_6_pretrain_without_subj_{holdout_subj_id}_model_params.pth'
+            )
+        )
+    )
 
     weight_shape = calibrate_model.final_layer.conv_classifier.weight.shape
 
