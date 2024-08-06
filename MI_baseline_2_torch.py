@@ -264,7 +264,7 @@ for holdout_subj_id in subject_ids_lst:
         pre_train_train_set = BaseConcatDataset(pre_train_train_set_lst)
         pre_train_test_set = BaseConcatDataset(pre_train_test_set_lst)
         ### ------------------------------
-
+        set_random_seeds(seed=seed, cuda=cuda)
         cur_model = model_object(
             n_chans,
             args.n_classes,
@@ -374,7 +374,7 @@ for holdout_subj_id in subject_ids_lst:
 
     ### Baseline accuracy on the finetune_valid set
     finetune_subj_valid_loader = DataLoader(finetune_subj_valid_set, batch_size=args.batch_size)
-
+    set_random_seeds(seed=seed, cuda=cuda)
     finetune_model = model_object(
         n_chans,
         args.n_classes,
@@ -387,7 +387,11 @@ for holdout_subj_id in subject_ids_lst:
         finetune_model.cuda()
 
     loss_fn = torch.nn.NLLLoss()
-    _, finetune_baseline_acc = test_model(finetune_subj_valid_loader, finetune_model, loss_fn)
+    _, finetune_baseline_acc = test_model(
+        finetune_subj_valid_loader, 
+        finetune_model, 
+        loss_fn
+    )
     print(f'Before fine tuning for subject {holdout_subj_id}, the baseline accuracy is {finetune_baseline_acc}')
 
     ### Finetune with different amount of new data
@@ -437,7 +441,8 @@ for holdout_subj_id in subject_ids_lst:
             finetune_optimizer = torch.optim.AdamW(
                 finetune_model.parameters(),
                 lr=args.fine_tune_lr, 
-                weight_decay=args.fine_tune_weight_decay)
+                weight_decay=args.fine_tune_weight_decay
+            )
             finetune_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 finetune_optimizer,
                 T_max=args.fine_tune_n_epochs - 1
@@ -456,7 +461,11 @@ for holdout_subj_id in subject_ids_lst:
                     epoch, 
                     device
                 )
-                test_loss, test_accuracy = test_model(finetune_subj_valid_loader, finetune_model, loss_fn)
+                test_loss, test_accuracy = test_model(
+                    finetune_subj_valid_loader, 
+                    finetune_model, 
+                    loss_fn
+                )
                 test_accuracy_lst.append(test_accuracy)
 
                 print(
