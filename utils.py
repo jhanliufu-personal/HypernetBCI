@@ -158,6 +158,7 @@ def parse_training_config():
     parser.add_argument('--repetition', default=5, type=int, 
                         help="Repeat for this many times for each training_data_amount")
     parser.add_argument('--n_classes', default=4, type=int)
+    parser.add_argument('--random_seed', default=20200220, type=int)
 
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')

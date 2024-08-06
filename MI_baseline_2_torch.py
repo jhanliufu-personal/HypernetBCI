@@ -12,10 +12,13 @@ For other approaches, check out the meta learning papers
 import matplotlib.pyplot as plt
 from braindecode.datasets import MOABBDataset, BaseConcatDataset
 from numpy import multiply
-from braindecode.preprocessing import (Preprocessor,
-                                       exponential_moving_standardize,
-                                       preprocess)
-from braindecode.preprocessing import create_windows_from_events
+from braindecode.preprocessing import (
+    Preprocessor,
+    exponential_moving_standardize,
+    preprocess,
+    create_windows_from_events
+)
+from braindecode.datautil import load_concat_dataset
 import torch
 from braindecode.util import set_random_seeds
 import matplotlib.pyplot as plt
@@ -39,10 +42,71 @@ warnings.filterwarnings('ignore')
 args = parse_training_config()
 model_object = import_model(args.model_name)
 subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1,]
-dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
 
-print('Data loaded')
+preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
+if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
+    print('Preprocessed dataset exists')
+    # If a preprocessed dataset exists
+    windows_dataset = load_concat_dataset(
+        path = preprocessed_dir,
+        preload = True,
+        ids_to_load = list(range(2 * subject_ids_lst[-1])),
+        target_name = None,
+    )
+    sfreq = windows_dataset.datasets[0].raw.info['sfreq']
+    print('Preprocessed dataset loaded')
+else:
+    dataset = MOABBDataset(dataset_name=args.dataset_name, subject_ids=subject_ids_lst)
+    print('Raw dataset loaded')
+
+    ### ----------------------------- Preprocessing -----------------------------
+    low_cut_hz = 4.  
+    high_cut_hz = 38. 
+    # Parameters for exponential moving standardization
+    factor_new = 1e-3
+    init_block_size = 1000
+    # Factor to convert from V to uV
+    factor = 1e6
+
+    preprocessors = [
+        # Keep EEG sensors
+        Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
+        # Convert from V to uV
+        Preprocessor(lambda data: multiply(data, factor)), 
+        # Bandpass filter
+        Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
+        # Exponential moving standardization
+        Preprocessor(exponential_moving_standardize,  
+                    factor_new=factor_new, init_block_size=init_block_size)
+    ]
+    # Transform the data
+    preprocess(dataset, preprocessors, n_jobs=-1)
+    print('Dataset preprocessed')
+
+    ### ----------------------------- Extract trial windows -----------------------------
+    trial_start_offset_seconds = -0.5
+    # Extract sampling frequency, check that they are same in all datasets
+    sfreq = dataset.datasets[0].raw.info['sfreq']
+    assert all([ds.raw.info['sfreq'] == sfreq for ds in dataset.datasets])
+    # Calculate the trial start offset in samples.
+    trial_start_offset_samples = int(trial_start_offset_seconds * sfreq)
+
+    # Create windows using braindecode function for this. It needs parameters to define how
+    # trials should be used.
+    windows_dataset = create_windows_from_events(
+        dataset,
+        trial_start_offset_samples=trial_start_offset_samples,
+        trial_stop_offset_samples=0,
+        preload=True,
+    )
+    print('Windows dataset created')
+
+    # Save preprocessed dataset
+    windows_dataset.save(
+        path=preprocessed_dir,
+        overwrite=True,
+    )
+    print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
 experiment_folder_name = f'{args.model_name}_{args.dataset_name}_finetune_{args.experiment_version}'
@@ -89,47 +153,6 @@ elif args.data_amount_unit == 'sec':
 elif args.data_amount_unit == 'min':
     unit_multiplier = args.trial_len_sec / 60
 
-### ----------------------------- Preprocessing -----------------------------
-low_cut_hz = 4.  
-high_cut_hz = 38. 
-# Parameters for exponential moving standardization
-factor_new = 1e-3
-init_block_size = 1000
-# Factor to convert from V to uV
-factor = 1e6
-
-preprocessors = [
-    # Keep EEG sensors
-    Preprocessor('pick_types', eeg=True, meg=False, stim=False),  
-    # Convert from V to uV
-    Preprocessor(lambda data: multiply(data, factor)), 
-    # Bandpass filter
-    Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz),  
-    # Exponential moving standardization
-    Preprocessor(exponential_moving_standardize,  
-                factor_new=factor_new, init_block_size=init_block_size)
-]
-
-# Transform the data
-preprocess(dataset, preprocessors, n_jobs=-1)
-
-### ----------------------------- Extract trial windows -----------------------------
-trial_start_offset_seconds = -0.5
-# Extract sampling frequency, check that they are same in all datasets
-sfreq = dataset.datasets[0].raw.info['sfreq']
-assert all([ds.raw.info['sfreq'] == sfreq for ds in dataset.datasets])
-# Calculate the trial start offset in samples.
-trial_start_offset_samples = int(trial_start_offset_seconds * sfreq)
-
-# Create windows using braindecode function for this. It needs parameters to define how
-# trials should be used.
-windows_dataset = create_windows_from_events(
-    dataset,
-    trial_start_offset_samples=trial_start_offset_samples,
-    trial_stop_offset_samples=0,
-    preload=True,
-)
-
 ### ----------------------------- Create model -----------------------------
 # Specify which GPU to run on to avoid collisions
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
@@ -143,7 +166,7 @@ else:
     print('No CUDA available, use CPU for training')
     device = 'cpu'
 
-seed = 20200220
+seed = args.random_seed
 set_random_seeds(seed=seed, cuda=cuda)
 
 ### ----------------------------- Training -----------------------------
