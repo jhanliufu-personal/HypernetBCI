@@ -372,7 +372,7 @@ for holdout_subj_id in subject_ids_lst:
             )
             pretrain_train_acc_lst.append(train_accuracy)
             train_tensor_distance_lst.append(pretrain_HNBCI.calculate_tensor_distance())
-            pretrain_lr_lst.append(scheduler.param_groups[0]['lr'])
+            pretrain_lr_lst.append(optimizer.param_groups[0]['lr'])
 
             # Update weight tensor for each evaluation pass
             pretrain_HNBCI.calibrate()
