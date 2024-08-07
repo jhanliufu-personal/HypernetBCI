@@ -7,6 +7,7 @@ from numbers import Integral
 import numpy as np
 import argparse
 import json
+from contextlib import nullcontext
 
 import torch
 from tqdm import tqdm
@@ -160,6 +161,7 @@ def parse_training_config():
     parser.add_argument('--n_classes', default=4, type=int)
     parser.add_argument('--random_seed', default=20200220, type=int)
 
+    parser.add_argument('--lr_warmup', default=False, type=bool, help='whether to warm up learning rate during training')
     parser.add_argument('--lr', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--fine_tune_lr', default=1e-3, type=float, help='fine tune learning rate')
 
@@ -227,6 +229,7 @@ def train_one_epoch(
     loss_fn, 
     optimizer,
     scheduler: LRScheduler, 
+    warmup_scheduler: None,
     epoch: int, 
     device="cuda", 
     print_batch_stats=False,
@@ -277,7 +280,9 @@ def train_one_epoch(
             )
 
     # Update the learning rate
-    scheduler.step()
+    with warmup_scheduler.dampening() if warmup_scheduler is not None else nullcontext():
+        scheduler.step()
+
 
     correct /= len(dataloader.dataset)
     return train_loss / len(dataloader), correct

@@ -29,6 +29,7 @@ import pickle
 import numpy as np
 from copy import deepcopy
 from itertools import chain
+from pytorch_warmup import UntunedLinearWarmup
 
 from utils import (
     get_subset, import_model, parse_training_config, 
@@ -309,6 +310,10 @@ for holdout_subj_id in subject_ids_lst:
             optimizer,
             T_max=args.n_epochs - 1
         )
+        if args.lr_warmup:
+            warmup_scheduler = UntunedLinearWarmup(optimizer)
+        else:
+            warmup_scheduler = None
 
         ### ---------------------------- PREPARE PRETRAIN DATASETS ----------------------------
         ### THIS PART IS FOR BCNI2014001
@@ -344,6 +349,7 @@ for holdout_subj_id in subject_ids_lst:
 
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
+        pretrain_lr_lst = []
         train_tensor_distance_lst = []
         test_tensor_distance_lst = []
         for epoch in range(1, args.n_epochs + 1):
@@ -355,6 +361,7 @@ for holdout_subj_id in subject_ids_lst:
                 loss_fn, 
                 optimizer, 
                 scheduler, 
+                warmup_scheduler,
                 epoch, 
                 device,
                 print_batch_stats=False,
@@ -365,7 +372,8 @@ for holdout_subj_id in subject_ids_lst:
             )
             pretrain_train_acc_lst.append(train_accuracy)
             train_tensor_distance_lst.append(pretrain_HNBCI.calculate_tensor_distance())
-            
+            pretrain_lr_lst.append(scheduler.param_groups[0]['lr'])
+
             # Update weight tensor for each evaluation pass
             pretrain_HNBCI.calibrate()
             test_loss, test_accuracy = test_model(
@@ -406,6 +414,7 @@ for holdout_subj_id in subject_ids_lst:
             holdout_subj_id: {
                 'pretrain_test_acc': pretrain_test_acc_lst,
                 'pretrain_train_acc': pretrain_train_acc_lst,
+                'pretrain_lr_lst': pretrain_lr_lst,
                 'train_tensor_distance': train_tensor_distance_lst,
                 'test_tensor_distance': test_tensor_distance_lst
             }
