@@ -342,6 +342,9 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         # Load temporal verifier
         temporal_verifier.load_state_dict(torch.load(temporal_verifier_path))
 
+    if args.only_pretrain:
+        continue
+
     ########################################################
     ###################### ADAPTATION ######################
     ########################################################
@@ -485,3 +488,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             'adaptation_tov_loss': adaptation_tov_loss_lst
         }
     })
+
+    if os.path.exists(results_file_path):
+        os.remove(results_file_path)
+    with open(results_file_path, 'wb') as f:
+        pkl.dump(results_file_path, f)

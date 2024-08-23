@@ -2,6 +2,7 @@
     "gpu_number": "0",
     "dataset_name": "Schirrmeister2017",
     "experiment_version": 1,
+    "only_pretrain": false,
     "scenarios": [
         [1, 7],
         [5, 3],
