@@ -150,7 +150,7 @@ if os.path.exists(results_file_path):
         dict_results = pkl.load(f)
 
 # adapt from one subject to another, not multi-source
-for i, (source_subject, target_subject) in args.scenarios:
+for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     dict_key = f'from_{source_subject}to_{target_subject}'
     if dict_results.get(dict_key) is not None:
