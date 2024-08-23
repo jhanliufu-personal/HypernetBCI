@@ -236,12 +236,14 @@ for i, (source_subject, target_subject) in args.scenarios:
         # Begin pretraining on source subject
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
+        pretrain_tov_loss_lst = []
         for epoch in range(1, args.n_epochs + 1):
 
             network.train()
             pretrain_correct = 0
+            batch_avg_tov_loss = 0
             # Train for one epoch: Iterate through pretraining batches
-            for _, (src_x, src_y, _) in enumerate(src_pretrain_loader):
+            for batch_idx, (src_x, src_y, _) in enumerate(src_pretrain_loader):
 
                 pretrain_optimizer.zero_grad()
                 tov_optimizer.zero_grad()
@@ -261,6 +263,7 @@ for i, (source_subject, target_subject) in args.scenarios:
                 tov_predictions = temporal_verifier(masked_features.detach())
                 # calculate difference btw the full features and predicted features
                 tov_loss = mse_loss(tov_predictions, tov_predictions)
+                batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
                 total_loss = src_classification_loss + tov_loss
                 total_loss.backward()
@@ -270,6 +273,8 @@ for i, (source_subject, target_subject) in args.scenarios:
             pretrain_accuracy = pretrain_correct / len(src_pretrain_loader.dataset)
             # Save pretrain accuracy
             pretrain_train_acc_lst.append(pretrain_accuracy)
+            # Save batch-averaged tov loss
+            pretrain_tov_loss_lst.append(batch_avg_tov_loss)
             print(f'[Epoch : {epoch}/{args.n_epochs}] training accuracy = {100 * pretrain_accuracy:.1f}')
 
             # Test model on validation set
@@ -302,7 +307,8 @@ for i, (source_subject, target_subject) in args.scenarios:
         dict_pretrain.update({
             dict_key: {
                 'pretrain_test_acc': pretrain_test_acc_lst,
-                'pretrain_train_acc': pretrain_train_acc_lst
+                'pretrain_train_acc': pretrain_train_acc_lst,
+                'pretrain_tov_loss': pretrain_tov_loss_lst
             }
         })
         if os.path.exists(pretrain_file_path):
@@ -365,10 +371,12 @@ for i, (source_subject, target_subject) in args.scenarios:
     )
 
     adaptation_test_acc_lst = []
+    adaptation_tov_loss_lst = []
     for epoch in range(1, args.n_epochs + 1):
         # Adapt for one epoch
         network.train()
-        for _, (trg_x, _, _) in enumerate(target_adaptation_loader):
+        batch_avg_tov_loss = 0
+        for batch_idx, (trg_x, _, _) in enumerate(target_adaptation_loader):
 
             adaptation_optimizer.zero_grad()
             # tov_optimizer.zero_grad()
@@ -393,6 +401,7 @@ for i, (source_subject, target_subject) in args.scenarios:
             tov_predictions = temporal_verifier(masked_features.detach())
             # calculate difference btw the full features and predicted features
             tov_loss = mse_loss(tov_predictions, tov_predictions)
+            batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
             # Overall loss
             loss = trg_ent + args.TOV_wt * tov_loss
@@ -415,6 +424,8 @@ for i, (source_subject, target_subject) in args.scenarios:
         # Save test accuracy
         test_accuracy = test_correct / len(target_test_loader.dataset)
         adaptation_test_acc_lst.append(test_accuracy)
+        # Save adaptation temporal consistency loss
+        adaptation_tov_loss_lst.append(batch_avg_tov_loss)
         print(f'[Epoch : {epoch}/{args.n_epochs}] validation accuracy = {100 * test_accuracy:.1f}')
 
         if test_accuracy > best_test_accuracy:
@@ -448,6 +459,9 @@ for i, (source_subject, target_subject) in args.scenarios:
 
     # Save results
     dict_results.update({
-        dict_key: adaptation_test_acc_lst
+        dict_key: {
+            'adaptation_accuracy': adaptation_test_acc_lst,
+            'adaptation_tov_loss': adaptation_tov_loss_lst
+        }
     })
 
