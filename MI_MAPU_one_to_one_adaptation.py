@@ -184,9 +184,10 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         args.n_classes
     )
 
-    # Prepare the temporal imputer / verifier
-    feature_dimension = 40
-    temporal_verifier = myTemporal_Imputer(feature_dimension, feature_dimension)
+    if args.add_tov_loss:
+        # Prepare the temporal imputer / verifier
+        feature_dimension = 40
+        temporal_verifier = myTemporal_Imputer(feature_dimension, feature_dimension)
 
     # Send to GPU
     if cuda:
@@ -200,12 +201,13 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         lr=args.pretrain_lr,
         weight_decay=args.weight_decay
     )
-    # Optimizes the temporal imputer
-    tov_optimizer = torch.optim.Adam(
-        temporal_verifier.parameters(),
-        lr=args.imputer_lr,
-        weight_decay=args.weight_decay
-    )
+    if args.add_tov_loss:
+        # Optimizes the temporal imputer
+        tov_optimizer = torch.optim.Adam(
+            temporal_verifier.parameters(),
+            lr=args.imputer_lr,
+            weight_decay=args.weight_decay
+        )
 
     # Prepare pretrain loss functions
     mse_loss = torch.nn.MSELoss()
@@ -218,11 +220,12 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         f'{experiment_folder_name}/',
         f'{temp_exp_name}_{dict_key}_pretrained_model_params.pth'
     )
-    temporal_verifier_path = os.path.join(
-        dir_results, 
-        f'{experiment_folder_name}/',
-        f'{temp_exp_name}_{dict_key}_pretrained_temporal_verifier_params.pth'
-    )
+    if args.add_tov_loss:
+        temporal_verifier_path = os.path.join(
+            dir_results, 
+            f'{experiment_folder_name}/',
+            f'{temp_exp_name}_{dict_key}_pretrained_temporal_verifier_params.pth'
+        )
     figure_title = f'{temp_exp_name}_{dict_key}_pretrain_acc_curve'
     pretrain_acc_curve_path = os.path.join(
         dir_results, 
@@ -230,7 +233,10 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         f'{figure_title}.png'
     )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
-    temporal_verifier_exist = os.path.exists(temporal_verifier_path) and os.path.getsize(temporal_verifier_path) > 0
+    if args.add_tov_loss:
+        temporal_verifier_exist = os.path.exists(temporal_verifier_path) and os.path.getsize(temporal_verifier_path) > 0
+    else:
+        temporal_verifier_exist = True
     # Also check if the pretrain accuracy has been saved
     pretraining_done = model_exist and temporal_verifier_exist and (dict_pretrain.get(dict_key) is not None)
 
@@ -251,7 +257,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             for batch_idx, (src_x, src_y, _) in enumerate(src_pretrain_loader):
 
                 pretrain_optimizer.zero_grad()
-                tov_optimizer.zero_grad()
+                if args.add_tov_loss:
+                    tov_optimizer.zero_grad()
                 src_x, src_y = src_x.to(device), src_y.to(device)
 
                 src_features, src_prediction = network(src_x)
@@ -260,21 +267,26 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 src_classification_loss = cross_entropy(src_prediction, src_y)
                 batch_avg_cls_loss = (batch_avg_cls_loss * batch_idx + src_classification_loss) / (batch_idx + 1)
 
-                masked_x, mask = masking(src_x, num_splits=10, num_masked=2)
-                # mask the signal
-                masked_features, masked_prediction = network(masked_x)
-                # extract features from masked signal
-                masked_features = masked_features.squeeze(-1)
-                # predict full features from masked features
-                tov_predictions = temporal_verifier(masked_features.detach())
-                # calculate difference btw the full features and predicted features
-                tov_loss = mse_loss(tov_predictions, src_features)
-                batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
+                if args.add_tov_loss:
+                    masked_x, mask = masking(src_x, num_splits=10, num_masked=2)
+                    # mask the signal
+                    masked_features, masked_prediction = network(masked_x)
+                    # extract features from masked signal
+                    masked_features = masked_features.squeeze(-1)
+                    # predict full features from masked features
+                    tov_predictions = temporal_verifier(masked_features.detach())
+                    # calculate difference btw the full features and predicted features
+                    tov_loss = mse_loss(tov_predictions, src_features)
+                    batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
+                else:
+                    tov_loss = 0
+                    batch_avg_tov_loss = 0
 
                 total_loss = src_classification_loss + tov_loss
                 total_loss.backward()
                 pretrain_optimizer.step()
-                tov_optimizer.step()
+                if args.add_tov_loss:
+                    tov_optimizer.step()
 
             pretrain_accuracy = pretrain_correct / len(src_pretrain_loader.dataset)
             # Save pretrain accuracy
@@ -333,14 +345,16 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         # Save the source pretrained model and temporal verifier
         src_only_model = deepcopy(network.state_dict())
         torch.save(src_only_model, model_param_path)
-        torch.save(temporal_verifier.state_dict(), temporal_verifier_path)
+        if args.add_tov_loss:
+            torch.save(temporal_verifier.state_dict(), temporal_verifier_path)
 
     else:
         print('Pretraining done, load pretrained model and temporal verifier')
         # Load trained model
         network.load_state_dict(torch.load(model_param_path))
-        # Load temporal verifier
-        temporal_verifier.load_state_dict(torch.load(temporal_verifier_path))
+        if args.add_tov_loss:
+            # Load temporal verifier
+            temporal_verifier.load_state_dict(torch.load(temporal_verifier_path))
 
     if args.only_pretrain:
         continue
@@ -489,6 +503,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         }
     })
 
+    # Save results to pickle file
     if os.path.exists(results_file_path):
         os.remove(results_file_path)
     with open(results_file_path, 'wb') as f:
