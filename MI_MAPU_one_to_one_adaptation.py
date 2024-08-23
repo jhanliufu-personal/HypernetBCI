@@ -506,6 +506,6 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     # Save results to pickle file
     if os.path.exists(results_file_path):
-        os.remove(results_file_path)
+        os.remove(dict_results)
     with open(results_file_path, 'wb') as f:
-        pkl.dump(results_file_path, f)
+        pkl.dump(dict_results, f)
