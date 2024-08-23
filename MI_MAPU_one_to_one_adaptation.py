@@ -459,7 +459,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         f'{experiment_folder_name}/',
         f'{temp_exp_name}_{dict_key}_best_adapted_model_params.pth'
     )
-    torch.save(best_model.state_dict(), best_model_path)
+    torch.save(best_model, best_model_path)
 
     # Plot results
     figure_title = f'{temp_exp_name}_{dict_key}_adaptation_acc_curve'
