@@ -291,8 +291,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             valid_accuracy = valid_correct / len(src_valid_loader.dataset)
             pretrain_test_acc_lst.append(valid_accuracy)
             print(
-                f'[Epoch : {epoch}/{args.n_epochs}] ' 
-                f'training accuracy = {100 * pretrain_accuracy:.1f}%' 
+                f'[Epoch : {epoch}/{args.pretrain_n_epochs}] ' 
+                f'training accuracy = {100 * pretrain_accuracy:.1f}% ' 
                 f'validation accuracy = {100 * valid_accuracy:.1f}%'
             )
 
@@ -431,7 +431,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         adaptation_test_acc_lst.append(test_accuracy)
         # Save adaptation temporal consistency loss
         adaptation_tov_loss_lst.append(batch_avg_tov_loss)
-        print(f'[Epoch : {epoch}/{args.n_epochs}] validation accuracy = {100 * test_accuracy:.1f}')
+        print(f'[Epoch : {epoch}/{args.adaptation_n_epochs}] validation accuracy = {100 * test_accuracy:.1f}')
 
         if test_accuracy > best_test_accuracy:
             best_model = deepcopy(network.state_dict())
