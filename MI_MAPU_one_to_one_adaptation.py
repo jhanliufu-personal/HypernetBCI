@@ -193,7 +193,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     if cuda:
         set_random_seeds(seed=seed, cuda=cuda)
         network.cuda()
-        temporal_verifier.cuda()
+        if args.add_tov_loss:
+            temporal_verifier.cuda()
 
     # optimizes the network (actual feature extractor)
     pretrain_optimizer = torch.optim.Adam(
