@@ -185,6 +185,17 @@ def parse_training_config():
     parser.add_argument('--regularize_tensor_distance', default=True, type=bool)
     parser.add_argument('--regularization_coef', default=1, type=float)
 
+    # For MAPU
+    parser.add_argument('--scenarios', default=None, type=list)
+    parser.add_argument('--pretrain_lr', default=1e-3, type=float, help='pretraining learning rate')
+    parser.add_argument('--imputer_lr', default=1e-5, type=float, help='imputer learning rate')
+    parser.add_argument('--adaptation_lr', default=1e-5, type=float, help='adaptation learning rate')
+    parser.add_argument('--adaptation_lr_decay', default=1e-5, type=float)
+    parser.add_argument('--adaptation_lr_step_size', default=1e-5, type=float)
+    parser.add_argument('--ent_loss_wt', default=0.4216, type=float)
+    parser.add_argument('--im', default=0.5514, type=float)
+    parser.add_argument('--TOV_wt', default=0.6385, type=float)
+
     args = parser.parse_args()
     with open(args.json, 'r') as f:
         args_from_json = json.load(f)
