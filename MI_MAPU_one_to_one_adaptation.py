@@ -28,8 +28,8 @@ warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
@@ -239,6 +239,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
         pretrain_tov_loss_lst = []
+        pretrain_cls_loss_lst = []
         print(f'Pretraining on source subject {source_subject}')
         for epoch in range(1, args.pretrain_n_epochs + 1):
 
@@ -280,6 +281,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             pretrain_train_acc_lst.append(pretrain_accuracy)
             # Save batch-averaged tov loss
             pretrain_tov_loss_lst.append(batch_avg_tov_loss)
+            # Save batch-averaged classification loss
+            pretrain_cls_loss_lst.append(batch_avg_cls_loss)
 
             # Test model on validation set
             network.eval()
@@ -318,7 +321,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             dict_key: {
                 'pretrain_test_acc': pretrain_test_acc_lst,
                 'pretrain_train_acc': pretrain_train_acc_lst,
-                'pretrain_tov_loss': pretrain_tov_loss_lst
+                'pretrain_tov_loss': pretrain_tov_loss_lst,
+                'pretrain_cls_loss': pretrain_cls_loss_lst
             }
         })
         if os.path.exists(pretrain_file_path):
@@ -413,8 +417,6 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             # predict full features from masked features
             tov_predictions = temporal_verifier(masked_features.detach())
             # calculate difference btw the full features and predicted features
-            print(tov_predictions.shape)
-            print(trg_features.shape)
             tov_loss = mse_loss(tov_predictions, trg_features)
             batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
@@ -457,7 +459,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         f'{experiment_folder_name}/',
         f'{temp_exp_name}_{dict_key}_best_adapted_model_params.pth'
     )
-    torch.save(src_only_model.state_dict(), best_model_path)
+    torch.save(best_model.state_dict(), best_model_path)
 
     # Plot results
     figure_title = f'{temp_exp_name}_{dict_key}_adaptation_acc_curve'
