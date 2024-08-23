@@ -183,14 +183,16 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         'drop', 
         args.n_classes
     )
-    # Send to GPU
-    if cuda:
-        set_random_seeds(seed=seed, cuda=cuda)
-        network.cuda()
 
     # Prepare the temporal imputer / verifier
     feature_dimension = 40
     temporal_verifier = myTemporal_Imputer(feature_dimension, feature_dimension)
+
+    # Send to GPU
+    if cuda:
+        set_random_seeds(seed=seed, cuda=cuda)
+        network.cuda()
+        temporal_verifier.cuda()
 
     # optimizes the network (actual feature extractor)
     pretrain_optimizer = torch.optim.Adam(
