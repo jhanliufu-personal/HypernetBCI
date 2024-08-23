@@ -239,6 +239,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
         pretrain_tov_loss_lst = []
+        print(f'Pretraining on source subject {source_subject}')
         for epoch in range(1, args.pretrain_n_epochs + 1):
 
             network.train()
@@ -293,7 +294,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             print(
                 f'[Epoch : {epoch}/{args.pretrain_n_epochs}] ' 
                 f'training accuracy = {100 * pretrain_accuracy:.1f}% ' 
-                f'validation accuracy = {100 * valid_accuracy:.1f}%'
+                f'validation accuracy = {100 * valid_accuracy:.1f}% '
+                f'tov_loss = {batch_avg_tov_loss: .4f}'
             )
 
         # Plot and save the pretraining accuracy curves
@@ -377,6 +379,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     adaptation_test_acc_lst = []
     adaptation_tov_loss_lst = []
+    print(f'Adapting to target subject {target_subject}')
     for epoch in range(1, args.adaptation_n_epochs + 1):
         # Adapt for one epoch
         network.train()
@@ -431,7 +434,11 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         adaptation_test_acc_lst.append(test_accuracy)
         # Save adaptation temporal consistency loss
         adaptation_tov_loss_lst.append(batch_avg_tov_loss)
-        print(f'[Epoch : {epoch}/{args.adaptation_n_epochs}] validation accuracy = {100 * test_accuracy:.1f}')
+        print(
+            f'[Epoch : {epoch}/{args.adaptation_n_epochs}] ' 
+            f'test accuracy after adaptation = {100 * test_accuracy:.1f} '
+            f'tov_loss = {batch_avg_tov_loss:.4f}'
+        )
 
         if test_accuracy > best_test_accuracy:
             best_model = deepcopy(network.state_dict())
