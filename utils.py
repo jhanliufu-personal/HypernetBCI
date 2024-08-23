@@ -189,6 +189,7 @@ def parse_training_config():
 
     # For MAPU
     parser.add_argument('--scenarios', default=None, type=list)
+    parser.add_argument('--add_tov_loss', default=True, type=bool)
     parser.add_argument('--pretrain_lr', default=1e-3, type=float, help='pretraining learning rate')
     parser.add_argument('--imputer_lr', default=1e-5, type=float, help='imputer learning rate')
     parser.add_argument('--adaptation_lr', default=1e-5, type=float, help='adaptation learning rate')
