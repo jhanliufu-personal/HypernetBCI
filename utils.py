@@ -168,6 +168,8 @@ def parse_training_config():
     parser.add_argument('--batch_size', default=32, type=int)
 
     parser.add_argument('--n_epochs', default=50, type=int)
+    parser.add_argument('--pretrain_n_epochs', default=50, type=int)
+    parser.add_argument('--adaptation_n_epochs', default=50, type=int)
     parser.add_argument('--fine_tune_n_epochs', default=30, type=int)
 
     parser.add_argument('--significance_level', default=0.95, type=float)

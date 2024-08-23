@@ -239,7 +239,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pretrain_train_acc_lst = []
         pretrain_test_acc_lst = []
         pretrain_tov_loss_lst = []
-        for epoch in range(1, args.n_epochs + 1):
+        for epoch in range(1, args.pretrain_n_epochs + 1):
 
             network.train()
             pretrain_correct = 0
@@ -277,7 +277,6 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             pretrain_train_acc_lst.append(pretrain_accuracy)
             # Save batch-averaged tov loss
             pretrain_tov_loss_lst.append(batch_avg_tov_loss)
-            print(f'[Epoch : {epoch}/{args.n_epochs}] training accuracy = {100 * pretrain_accuracy:.1f}')
 
             # Test model on validation set
             network.eval()
@@ -291,7 +290,11 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             # Save validation accuracy
             valid_accuracy = valid_correct / len(src_valid_loader.dataset)
             pretrain_test_acc_lst.append(valid_accuracy)
-            print(f'[Epoch : {epoch}/{args.n_epochs}] validation accuracy = {100 * valid_accuracy:.1f}')
+            print(
+                f'[Epoch : {epoch}/{args.n_epochs}] ' 
+                f'training accuracy = {100 * pretrain_accuracy:.1f}%' 
+                f'validation accuracy = {100 * valid_accuracy:.1f}%'
+            )
 
         # Plot and save the pretraining accuracy curves
         plt.figure()
@@ -320,7 +323,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
         # Save the source pretrained model and temporal verifier
         src_only_model = deepcopy(network.state_dict())
-        torch.save(src_only_model.state_dict(), model_param_path)
+        torch.save(src_only_model, model_param_path)
         torch.save(temporal_verifier.state_dict(), temporal_verifier_path)
 
     else:
@@ -374,7 +377,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     adaptation_test_acc_lst = []
     adaptation_tov_loss_lst = []
-    for epoch in range(1, args.n_epochs + 1):
+    for epoch in range(1, args.adaptation_n_epochs + 1):
         # Adapt for one epoch
         network.train()
         batch_avg_tov_loss = 0
@@ -466,4 +469,3 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             'adaptation_tov_loss': adaptation_tov_loss_lst
         }
     })
-

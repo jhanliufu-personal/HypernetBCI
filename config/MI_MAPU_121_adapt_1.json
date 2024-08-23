@@ -6,8 +6,9 @@
         [1, 2]
     ],
     "n_classes": 4,
-    "batch_size": 32,
-    "n_epochs": 40,
+    "batch_size": 72,
+    "pretrain_n_epochs": 20,
+    "adaptation_n_epochs": 20,
     "weight_decay": 1e-4,
     "pretrain_lr": 6.5e-4,
     "imputer_lr": 1e-5,
