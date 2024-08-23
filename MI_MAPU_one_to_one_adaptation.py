@@ -267,7 +267,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 # predict full features from masked features
                 tov_predictions = temporal_verifier(masked_features.detach())
                 # calculate difference btw the full features and predicted features
-                tov_loss = mse_loss(tov_predictions, tov_predictions)
+                tov_loss = mse_loss(tov_predictions, src_features)
                 batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
                 total_loss = src_classification_loss + tov_loss
@@ -297,8 +297,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 f'[Epoch : {epoch}/{args.pretrain_n_epochs}] ' 
                 f'training accuracy = {100 * pretrain_accuracy:.1f}% ' 
                 f'validation accuracy = {100 * valid_accuracy:.1f}% '
-                f'tov_loss = {batch_avg_tov_loss: .3e}'
-                f'classification_loss = {batch_avg_cls_loss: .3e}'
+                f'tov_loss = {batch_avg_tov_loss: .3e} '
+                f'classification_loss = {batch_avg_cls_loss: .3e} '
             )
 
         # Plot and save the pretraining accuracy curves
@@ -411,7 +411,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             # predict full features from masked features
             tov_predictions = temporal_verifier(masked_features.detach())
             # calculate difference btw the full features and predicted features
-            tov_loss = mse_loss(tov_predictions, tov_predictions)
+            tov_loss = mse_loss(tov_predictions, trg_features)
             batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
             # Overall loss
