@@ -1,0 +1,20 @@
+{
+    "gpu_number": "0",
+    "dataset_name": "Schirrmeister2017",
+    "experiment_version": 1,
+    "scenarios": [
+        [1, 2]
+    ],
+    "n_classes": 4,
+    "batch_size": 32,
+    "n_epochs": 40,
+    "weight_decay": 1e-4,
+    "pretrain_lr": 6.5e-4,
+    "imputer_lr": 1e-5,
+    "adaptation_lr": 1e-5,
+    "adaptation_lr_decay": 0.5,
+    "adaptation_lr_step_size": 50,
+    "ent_loss_wt": 0.4216,
+    "im": 0.5514,
+    "TOV_wt": 0.6385
+}
