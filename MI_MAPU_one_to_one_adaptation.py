@@ -394,7 +394,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             # tov_optimizer.zero_grad()
             trg_x = trg_x.to(device)
 
-            trg_features, trg_prediction = network(src_x)
+            trg_features, trg_prediction = network(trg_x)
             trg_features = trg_features.squeeze(-1)
             # select evidential vs softmax probabilities
             trg_prob = torch.nn.Softmax(dim=1)(network.logits)
