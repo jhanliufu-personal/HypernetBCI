@@ -245,6 +245,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             network.train()
             pretrain_correct = 0
             batch_avg_tov_loss = 0
+            batch_avg_cls_loss = 0
             # Train for one epoch: Iterate through pretraining batches
             for batch_idx, (src_x, src_y, _) in enumerate(src_pretrain_loader):
 
@@ -256,6 +257,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 pretrain_correct += (src_prediction.argmax(1) == src_y).sum().item()
                 src_features = src_features.squeeze(-1)
                 src_classification_loss = cross_entropy(src_prediction, src_y)
+                batch_avg_cls_loss = (batch_avg_cls_loss * batch_idx + src_classification_loss) / (batch_idx + 1)
 
                 masked_x, mask = masking(src_x, num_splits=10, num_masked=2)
                 # mask the signal
@@ -295,7 +297,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 f'[Epoch : {epoch}/{args.pretrain_n_epochs}] ' 
                 f'training accuracy = {100 * pretrain_accuracy:.1f}% ' 
                 f'validation accuracy = {100 * valid_accuracy:.1f}% '
-                f'tov_loss = {batch_avg_tov_loss: .4f}'
+                f'tov_loss = {batch_avg_tov_loss: .3e}'
+                f'classification_loss = {batch_avg_cls_loss: .3e}'
             )
 
         # Plot and save the pretraining accuracy curves
