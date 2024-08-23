@@ -332,6 +332,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         torch.save(temporal_verifier.state_dict(), temporal_verifier_path)
 
     else:
+        print('Pretraining done, load pretrained model and temporal verifier')
         # Load trained model
         network.load_state_dict(torch.load(model_param_path))
         # Load temporal verifier
@@ -412,6 +413,8 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             # predict full features from masked features
             tov_predictions = temporal_verifier(masked_features.detach())
             # calculate difference btw the full features and predicted features
+            print(tov_predictions.shape)
+            print(trg_features.shape)
             tov_loss = mse_loss(tov_predictions, trg_features)
             batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
