@@ -248,7 +248,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pretrain_test_acc_lst = []
         pretrain_tov_loss_lst = []
         pretrain_cls_loss_lst = []
-        print(f'Pretraining on source subjects other than {target_subject}')
+        print(f'Pretraining on source subject {source_subject}')
         for epoch in range(1, args.pretrain_n_epochs + 1):
 
             network.train()
