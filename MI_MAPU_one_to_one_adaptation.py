@@ -508,6 +508,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 if test_accuracy > overall_best_test_accuracy:
                     best_model = deepcopy(network.state_dict())
                     overall_best_test_accuracy = test_accuracy
+                    print(f'New overall best accuracy achieved: {overall_best_test_accuracy*100:.1f}')
 
             adaptation_test_acc_lst.append(cur_run_best_accuracy)
 
