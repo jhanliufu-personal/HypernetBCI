@@ -1,0 +1,33 @@
+{
+    "gpu_number": "1",
+    "dataset_name": "Schirrmeister2017",
+    "experiment_version": 3,
+    "only_pretrain": true,
+    "add_tov_loss": false,
+    "scenarios": [
+        [1, 7],
+        [5, 3],
+        [2, 6],
+        [10, 4],
+        [3, 8],
+        [6, 9],
+        [11, 2],
+        [8, 1],
+        [4, 12]
+    ],
+    "n_classes": 4,
+    "batch_size": 72,
+    "pretrain_n_epochs": 20,
+    "adaptation_n_epochs": 20,
+    "data_amount_step": 40,
+    "repetition": 3,
+    "weight_decay": 1e-4,
+    "pretrain_lr": 6.5e-4,
+    "imputer_lr": 1e-5,
+    "adaptation_lr": 1e-5,
+    "adaptation_lr_decay": 0.5,
+    "adaptation_lr_step_size": 50,
+    "ent_loss_wt": 0.4216,
+    "im": 0.5514,
+    "TOV_wt": 0.6385
+}

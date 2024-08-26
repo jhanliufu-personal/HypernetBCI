@@ -154,31 +154,20 @@ if os.path.exists(results_file_path):
 # adapt from one subject to another, not multi-source
 for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
-    dict_key = f'adapt_to_{target_subject}'
+    dict_key = f'from_{source_subject}to_{target_subject}'
     if dict_results.get(dict_key) is not None:
         continue
 
-    print(f'Adapt model on multi-sources to target subject {target_subject}')
+    print(f'Adapt model on source subject {source_subject} to target subject {target_subject}')
     ########################################################
     ###################### PRETRAINING #####################
     ########################################################
 
     # Prepare source dataset
-    src_dataset = BaseConcatDataset([
-        splitted_by_subj.get(f'{i}') 
-        for i in subject_ids_lst 
-        if i != target_subject
-    ])
-    src_pretrain_set_lst = []
-    src_valid_set_lst = []
-    for key, val in src_dataset.split('subject').items():
-        subj_splitted_by_run = val.split('run')
-        cur_train_set = subj_splitted_by_run.get('0train')
-        src_pretrain_set_lst.append(cur_train_set)
-        cur_valid_set = subj_splitted_by_run.get('1test')
-        src_valid_set_lst.append(cur_valid_set)
-    src_pretrain_dataset = BaseConcatDataset(src_pretrain_set_lst)
-    src_valid_dataset = BaseConcatDataset(src_valid_set_lst)
+    src_dataset = splitted_by_subj.get(f'{source_subject}')
+    src_dataset_splitted_by_run = src_dataset.split('run')
+    src_pretrain_dataset = src_dataset_splitted_by_run.get('0train')
+    src_valid_dataset = src_dataset_splitted_by_run.get('1test')
     src_pretrain_loader = DataLoader(
         src_pretrain_dataset, 
         batch_size=args.batch_size, 
@@ -398,6 +387,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     # Save baseline accuracy
     baseline_test_accuracy = baseline_test_correct / len(target_test_loader.dataset)
     dict_subj_results = {0: [baseline_test_accuracy,]}
+    print(f'Before adaptation, the baseline accuracy is {baseline_test_accuracy*100:.1f}')
 
     '''
     recording best model; overall best accuracy is the best accuracy ever 

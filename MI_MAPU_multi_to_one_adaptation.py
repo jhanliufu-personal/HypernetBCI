@@ -29,8 +29,8 @@ warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
@@ -398,6 +398,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     # Save baseline accuracy
     baseline_test_accuracy = baseline_test_correct / len(target_test_loader.dataset)
     dict_subj_results = {0: [baseline_test_accuracy,]}
+    print(f'Before adaptation, the baseline accuracy is {baseline_test_accuracy*100:.1f}')
 
     '''
     recording best model; overall best accuracy is the best accuracy ever 
