@@ -2,7 +2,7 @@
     "gpu_number": "1",
     "dataset_name": "Schirrmeister2017",
     "experiment_version": 3,
-    "only_pretrain": true,
+    "only_pretrain": false,
     "add_tov_loss": false,
     "scenarios": [
         [1, 7],
