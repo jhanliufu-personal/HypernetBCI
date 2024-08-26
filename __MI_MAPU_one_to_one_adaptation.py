@@ -1,12 +1,11 @@
 import os
-import numpy as np
 from copy import deepcopy
 import pickle as pkl
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
-from braindecode.datasets import MOABBDataset, BaseConcatDataset
+from braindecode.datasets import MOABBDataset
 from numpy import multiply
 from braindecode.preprocessing import (
     Preprocessor,
@@ -22,15 +21,15 @@ from baseline_MAPU.models import (
     ShallowFBCSPFeatureExtractor
 )
 from baseline_MAPU.loss import CrossEntropyLabelSmooth, EntropyLoss
-from utils import parse_training_config, get_subset
+from utils import parse_training_config
 
 import warnings
 warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
@@ -97,8 +96,7 @@ else:
     print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
-experiment_folder_name = f'MI_MAPU_one_to_one_adaptation_{args.experiment_version}'
-temp_exp_name = 'MAPU_one_to_one_adapt'
+experiment_folder_name = f'MI_MAPU_121_adaptation_{args.experiment_version}'
 # Create expriment folder
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 
@@ -154,31 +152,20 @@ if os.path.exists(results_file_path):
 # adapt from one subject to another, not multi-source
 for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
-    dict_key = f'adapt_to_{target_subject}'
+    dict_key = f'from_{source_subject}to_{target_subject}'
     if dict_results.get(dict_key) is not None:
         continue
 
-    print(f'Adapt model on multi-sources to target subject {target_subject}')
+    print(f'Adapt model on source subject {source_subject} to target subject {target_subject}')
     ########################################################
     ###################### PRETRAINING #####################
     ########################################################
 
     # Prepare source dataset
-    src_dataset = BaseConcatDataset([
-        splitted_by_subj.get(f'{i}') 
-        for i in subject_ids_lst 
-        if i != target_subject
-    ])
-    src_pretrain_set_lst = []
-    src_valid_set_lst = []
-    for key, val in src_dataset.split('subject').items():
-        subj_splitted_by_run = val.split('run')
-        cur_train_set = subj_splitted_by_run.get('0train')
-        src_pretrain_set_lst.append(cur_train_set)
-        cur_valid_set = subj_splitted_by_run.get('1test')
-        src_valid_set_lst.append(cur_valid_set)
-    src_pretrain_dataset = BaseConcatDataset(src_pretrain_set_lst)
-    src_valid_dataset = BaseConcatDataset(src_valid_set_lst)
+    src_dataset = splitted_by_subj.get(f'{source_subject}')
+    src_dataset_splitted_by_run = src_dataset.split('run')
+    src_pretrain_dataset = src_dataset_splitted_by_run.get('0train')
+    src_valid_dataset = src_dataset_splitted_by_run.get('1test')
     src_pretrain_loader = DataLoader(
         src_pretrain_dataset, 
         batch_size=args.batch_size, 
@@ -228,6 +215,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     cross_entropy = CrossEntropyLabelSmooth(args.n_classes, device, epsilon=0.1)
 
     # check if a source-trained model exists
+    temp_exp_name = 'MAPU_121_adapt'
     model_param_path = os.path.join(
         dir_results, 
         f'{experiment_folder_name}/',
@@ -259,7 +247,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pretrain_test_acc_lst = []
         pretrain_tov_loss_lst = []
         pretrain_cls_loss_lst = []
-        print(f'Pretraining on source subjects other than {target_subject}')
+        print(f'Pretraining on source subject {source_subject}')
         for epoch in range(1, args.pretrain_n_epochs + 1):
 
             network.train()
@@ -376,156 +364,114 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     ###################### ADAPTATION ######################
     ########################################################
 
+    # Freeze the classifier and temporal verifier
+    # only feature extractor can be changed from this point on
+    for k, v in network.named_parameters():
+        if 'final_layer' in k:
+            v.requires_grad = False
+    for _, v in temporal_verifier.named_parameters():
+        v.requires_grad = False
+
+    # recording best and last model
+    best_test_accuracy = 0
+    best_model = deepcopy(network.state_dict())
+    
     # prepare adaptation and test dataset from target subject
     target_dataset = splitted_by_subj.get(f'{target_subject}')
     target_dataset_splitted_by_run = target_dataset.split('run')
     target_adaptation_dataset = target_dataset_splitted_by_run.get('0train')
     target_test_dataset = target_dataset_splitted_by_run.get('1test')
+    target_adaptation_loader = DataLoader(
+        target_adaptation_dataset, 
+        batch_size=args.batch_size, 
+        shuffle=True
+    )
     target_test_loader = DataLoader(
         target_test_dataset, 
         batch_size=args.batch_size
     )
 
-    # Measure baseline accuracy before adaptation
-    network.eval()
-    baseline_test_correct = 0
-    with torch.no_grad():
-        for _, (test_x, test_y, _) in enumerate(target_test_loader):
-            test_x, test_y = test_x.to(device), test_y.to(device)
-            _, test_prediction = network(test_x)
-            baseline_test_correct += (test_prediction.argmax(1) == test_y).sum().item()
+    # Adaptation optimizer
+    adaptation_optimizer = torch.optim.Adam(
+        network.parameters(),
+        lr=args.adaptation_lr,
+        weight_decay=args.weight_decay
+    )
+    lr_scheduler = StepLR(
+        adaptation_optimizer, 
+        step_size=args.adaptation_lr_step_size, 
+        gamma=args.adaptation_lr_decay
+    )
 
-    # Save baseline accuracy
-    baseline_test_accuracy = baseline_test_correct / len(target_test_loader.dataset)
-    dict_subj_results = {0: [baseline_test_accuracy,]}
+    adaptation_test_acc_lst = []
+    adaptation_tov_loss_lst = []
+    print(f'Adapting to target subject {target_subject}')
+    for epoch in range(1, args.adaptation_n_epochs + 1):
+        # Adapt for one epoch
+        network.train()
+        batch_avg_tov_loss = 0
+        for batch_idx, (trg_x, _, _) in enumerate(target_adaptation_loader):
 
-    '''
-    recording best model; overall best accuracy is the best accuracy ever 
-    achieved on a target subject across all data amount and runs
-    '''
-    overall_best_test_accuracy = 0
-    overall_best_model = deepcopy(network.state_dict())
+            adaptation_optimizer.zero_grad()
+            # tov_optimizer.zero_grad()
+            trg_x = trg_x.to(device)
 
-    adaptation_trials_num = len(target_adaptation_dataset)
-    for adaptation_data_amount in np.arange(
-        1, 
-        (adaptation_trials_num // args.data_amount_step) + 1
-    ) * args.data_amount_step:
+            trg_features, trg_prediction = network(trg_x)
+            trg_features = trg_features.squeeze(-1)
+            # select evidential vs softmax probabilities
+            trg_prob = torch.nn.Softmax(dim=1)(network.logits)
 
-        adaptation_test_acc_lst = []
-        ### Since we're sampling randomly, repeat for 'repetition' times
-        for i in range(args.repetition):
+            # Entropy loss
+            trg_ent = args.ent_loss_wt * torch.mean(EntropyLoss(trg_prob))
+            # IM loss
+            trg_ent -= args.im * torch.sum(-trg_prob.mean(dim=0) * torch.log(trg_prob.mean(dim=0) + 1e-5))
 
-            ## Get current calibration samples
-            cur_adaptation_subset = get_subset(
-                target_adaptation_dataset, 
-                int(adaptation_data_amount), 
-                random_sample=True
-            )
-            cur_batch_size = args.batch_size if args.batch_size <= adaptation_data_amount else (adaptation_data_amount // 2)
-            cur_adaptation_subset_loader = DataLoader(
-                target_test_dataset, 
-                batch_size=cur_batch_size,
-                shuffle=True
-            )
+            # Calculate temporal consistency loss
+            masked_x, mask = masking(trg_x, num_splits=10, num_masked=2)
+            # mask the signal
+            masked_features, masked_prediction = network(masked_x)
+            # extract features from masked signal
+            masked_features = masked_features.squeeze(-1)
+            # predict full features from masked features
+            tov_predictions = temporal_verifier(masked_features.detach())
+            # calculate difference btw the full features and predicted features
+            tov_loss = mse_loss(tov_predictions, trg_features)
+            batch_avg_tov_loss = (batch_avg_tov_loss * batch_idx + tov_loss) / (batch_idx + 1)
 
-            # Reload trained model
-            network.load_state_dict(torch.load(model_param_path))
-            # Reload temporal verifier
-            temporal_verifier.load_state_dict(torch.load(temporal_verifier_path))
+            # Overall loss
+            loss = trg_ent + args.TOV_wt * tov_loss
+            loss.backward()
+            adaptation_optimizer.step()
+            # # But isn't the temporal imputer frozen during adaptatioin?
+            # tov_optimizer.step()
 
-            # Freeze the classifier and temporal verifier
-            # only feature extractor can be changed from this point on
-            for k, v in network.named_parameters():
-                if 'final_layer' in k:
-                    v.requires_grad = False
-            for _, v in temporal_verifier.named_parameters():
-                v.requires_grad = False
+        lr_scheduler.step()
 
-            # Reset adaptation optimizer and lr scheduler
-            adaptation_optimizer = torch.optim.Adam(
-                network.parameters(),
-                lr=args.adaptation_lr,
-                weight_decay=args.weight_decay
-            )
-            lr_scheduler = StepLR(
-                adaptation_optimizer, 
-                step_size=args.adaptation_lr_step_size, 
-                gamma=args.adaptation_lr_decay
-            )
+        # Test adapted model
+        network.eval()
+        test_correct = 0
+        with torch.no_grad():
+            for _, (test_x, test_y, _) in enumerate(target_test_loader):
+                test_x, test_y = test_x.to(device), test_y.to(device)
+                _, test_prediction = network(test_x)
+                test_correct += (test_prediction.argmax(1) == test_y).sum().item()
 
-            print(
-                f'Adapting to target subject {target_subject} ' 
-                f'with {adaptation_data_amount} adaptation samples '
-                f'(repetition {i+1})'
-            )
-            cur_run_best_accuracy = 0
-            for epoch in range(1, args.adaptation_n_epochs + 1):
-                # Adapt for one epoch
-                network.train()
-                # batch_avg_tov_loss = 0
-                for batch_idx, (trg_x, _, _) in enumerate(cur_adaptation_subset_loader):
+        # Save test accuracy
+        test_accuracy = test_correct / len(target_test_loader.dataset)
+        adaptation_test_acc_lst.append(test_accuracy)
+        # Save adaptation temporal consistency loss
+        adaptation_tov_loss_lst.append(batch_avg_tov_loss)
+        print(
+            f'[Epoch : {epoch}/{args.adaptation_n_epochs}] ' 
+            f'test accuracy after adaptation = {100 * test_accuracy:.1f} '
+            f'tov_loss = {batch_avg_tov_loss:.4f}'
+        )
 
-                    adaptation_optimizer.zero_grad()
-                    trg_x = trg_x.to(device)
+        if test_accuracy > best_test_accuracy:
+            best_model = deepcopy(network.state_dict())
+            best_test_accuracy = test_accuracy
 
-                    trg_features, trg_prediction = network(trg_x)
-                    trg_features = trg_features.squeeze(-1)
-                    # select evidential vs softmax probabilities
-                    trg_prob = torch.nn.Softmax(dim=1)(network.logits)
-
-                    # Entropy loss
-                    trg_ent = args.ent_loss_wt * torch.mean(EntropyLoss(trg_prob))
-                    # IM loss
-                    trg_ent -= args.im * torch.sum(-trg_prob.mean(dim=0) * torch.log(trg_prob.mean(dim=0) + 1e-5))
-
-                    # Calculate temporal consistency loss
-                    masked_x, mask = masking(trg_x, num_splits=10, num_masked=2)
-                    # mask the signal
-                    masked_features, masked_prediction = network(masked_x)
-                    # extract features from masked signal
-                    masked_features = masked_features.squeeze(-1)
-                    # predict full features from masked features
-                    tov_predictions = temporal_verifier(masked_features.detach())
-                    # calculate difference btw the full features and predicted features
-                    tov_loss = mse_loss(tov_predictions, trg_features)
-
-                    # Overall loss
-                    loss = trg_ent + args.TOV_wt * tov_loss
-                    loss.backward()
-                    adaptation_optimizer.step()
-                    lr_scheduler.step()
-
-                # Test adapted model
-                network.eval()
-                test_correct = 0
-                with torch.no_grad():
-                    for _, (test_x, test_y, _) in enumerate(target_test_loader):
-                        test_x, test_y = test_x.to(device), test_y.to(device)
-                        _, test_prediction = network(test_x)
-                        test_correct += (test_prediction.argmax(1) == test_y).sum().item()
-
-                # Save test accuracy
-                test_accuracy = test_correct / len(target_test_loader.dataset)
-                print(
-                    f'[Epoch : {epoch}/{args.adaptation_n_epochs}] ' 
-                    f'test accuracy after adaptation = {100 * test_accuracy:.1f} '
-                )
-
-                if test_accuracy > cur_run_best_accuracy:
-                    cur_run_best_accuracy = test_accuracy
-
-                if test_accuracy > overall_best_test_accuracy:
-                    best_model = deepcopy(network.state_dict())
-                    overall_best_test_accuracy = test_accuracy
-
-            adaptation_test_acc_lst.append(cur_run_best_accuracy)
-
-        dict_subj_results.update({
-            adaptation_data_amount: adaptation_test_acc_lst
-        })
-
-    # Save best model for the target subject across the board
+    # Save best model
     best_model_path = os.path.join(
         dir_results, 
         f'{experiment_folder_name}/',
@@ -533,9 +479,29 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     )
     torch.save(best_model, best_model_path)
 
+    # Plot results
+    figure_title = f'{temp_exp_name}_{dict_key}_adaptation_acc_curve'
+    adaptation_acc_curve_path = os.path.join(
+        dir_results, 
+        f'{experiment_folder_name}/',
+        f'{figure_title}.png'
+    )
+    plt.figure()
+    plt.plot(adaptation_test_acc_lst, label='Test accuracy after adaptation')
+    plt.legend()
+    plt.xlabel('Adaptation epochs')
+    plt.ylabel('Accuracy')
+    plt.title(figure_title)
+    plt.tight_layout()
+    plt.savefig(adaptation_acc_curve_path)
+    plt.close()
+
     # Save results
     dict_results.update({
-        dict_key: dict_subj_results
+        dict_key: {
+            'adaptation_accuracy': adaptation_test_acc_lst,
+            'adaptation_tov_loss': adaptation_tov_loss_lst
+        }
     })
 
     # Save results to pickle file

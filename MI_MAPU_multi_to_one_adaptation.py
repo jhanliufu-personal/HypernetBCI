@@ -151,7 +151,7 @@ if os.path.exists(results_file_path):
     with open(results_file_path, 'rb') as f:
         dict_results = pkl.load(f)
 
-# adapt from one subject to another, not multi-source
+# adapt from multiple source subjects to one target subject
 for i, target_subject in enumerate(subject_ids_lst):
 
     dict_key = f'adapt_to_{target_subject}'
@@ -422,7 +422,7 @@ for i, target_subject in enumerate(subject_ids_lst):
                 int(adaptation_data_amount), 
                 random_sample=True
             )
-            cur_batch_size = args.batch_size if args.batch_size <= adaptation_data_amount else (adaptation_data_amount // 2)
+            cur_batch_size = args.batch_size if args.batch_size <= adaptation_data_amount else int(adaptation_data_amount // 2)
             cur_adaptation_subset_loader = DataLoader(
                 target_test_dataset, 
                 batch_size=cur_batch_size,
