@@ -238,7 +238,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     trg_contrastive_loss_lst = []
     src_trg_contrastive_loss_lst = []
     domain_discrimination_loss_lst = []
-    src_prediction_loss_lst = []
+    src_classification_loss_lst = []
 
     # Training loop
     for epoch in range(1, args.n_epochs + 1):
@@ -249,7 +249,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         batch_avg_loss_t = 0
         batch_avg_loss_ts = 0
         batch_avg_disc_loss = 0
-        batch_avg_pred_loss = 0
+        batch_avg_cls_loss = 0
 
         # Train for one epoch: Iterate through one training batch from each dataset
         for batch_idx, (src_x, src_y, _) in enumerate(src_train_loader):
@@ -349,7 +349,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         trg_contrastive_loss_lst.append(batch_avg_loss_t)
         src_trg_contrastive_loss_lst.append(batch_avg_loss_ts)
         domain_discrimination_loss_lst.append(batch_avg_disc_loss)
-        src_prediction_loss_lst.append(batch_avg_cls_loss)
+        src_classification_loss_lst.append(batch_avg_cls_loss)
 
         print(
             f'[Epoch : {epoch}/{args.n_epochs}] ' 
@@ -376,7 +376,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     plt.plot(trg_contrastive_loss_lst, label='Target contrastive loss')
     plt.plot(src_trg_contrastive_loss_lst, label='Cross-domain contrastive loss')
     plt.plot(domain_discrimination_loss_lst, label='Domain disc. loss')
-    plt.plot(src_prediction_loss_lst, label='Source classification loss')
+    plt.plot(src_classification_loss_lst, label='Source classification loss')
     plt.legend()
     plt.xlabel('Training epochs')
     plt.ylabel('Loss')
@@ -395,7 +395,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             'trg_contrastive_loss': trg_contrastive_loss_lst,
             'src_trg_contrastive_loss': src_trg_contrastive_loss_lst,
             'domain_discrimination_loss': domain_discrimination_loss_lst,
-            'src_prediction_loss': src_prediction_loss_lst
+            'src_prediction_loss': src_classification_loss_lst
         }
     })
     if os.path.exists(train_file_path):
