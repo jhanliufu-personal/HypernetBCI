@@ -229,6 +229,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     # Mask, parameter for augmenter
     sequence_mask = torch.ones([n_chans, input_window_samples])
+    sequence_mask = sequence_mask.to(device)
 
     train_accuracy_lst = []
     src_valid_accuracy_lst = []
