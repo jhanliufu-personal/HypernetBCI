@@ -11,7 +11,7 @@ from contextlib import nullcontext
 
 import torch
 from tqdm import tqdm
-from torch.nn import Module
+from torch import nn
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 
@@ -239,7 +239,7 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 '''
 def train_one_epoch(
     dataloader: DataLoader, 
-    model: Module, 
+    model: nn.Module, 
     loss_fn, 
     optimizer,
     scheduler: LRScheduler, 
@@ -309,7 +309,7 @@ https://braindecode.org/stable/auto_examples/model_building/plot_train_in_pure_p
 @torch.no_grad()
 def test_model(
     dataloader: DataLoader, 
-    model: Module, 
+    model: nn.Module, 
     loss_fn, 
     print_batch_stats=True, 
     optimize_for_acc=True,
