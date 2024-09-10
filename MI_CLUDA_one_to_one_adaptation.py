@@ -257,7 +257,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 continue
 
             try:
-                trg_x = next(trg_train_iter)
+                trg_x, _, _ = next(trg_train_iter)
             except StopIteration:
                 # re-initialize if done emitting data
                 trg_train_loader = DataLoader(
