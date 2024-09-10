@@ -266,7 +266,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                     shuffle=True
                 )
                 trg_train_iter = iter(trg_train_loader)
-                trg_x = next(trg_train_iter)
+                trg_x, _, _ = next(trg_train_iter)
 
             optimizer.zero_grad()
             src_x, src_y = src_x.to(device), src_y.to(device)
