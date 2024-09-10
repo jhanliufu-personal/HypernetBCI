@@ -132,9 +132,9 @@ class CLUDA_NN(nn.Module):
         #Since the tcn_out has the shape N*C_out*L, we will get the last timestep of the output 
         # q_s = self.encoder_q(sequence_q_s.transpose(1,2))[:,:,-1]  # queries: NxC
         q_s = self.encoder_q(sequence_q_s).squeeze(-1)[:,:,-1]  # queries: NxC
-        print(q_s.shape)
+        # print(q_s.shape)
         q_s = nn.functional.normalize(q_s, dim=1)
-        print(q_s.shape)
+        # print(q_s.shape)
         #Project the query
         p_q_s = self.projector(q_s, None)  # queries: NxC
         p_q_s = nn.functional.normalize(p_q_s, dim=1)

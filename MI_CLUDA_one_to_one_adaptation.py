@@ -330,7 +330,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         with torch.no_grad():
             for _, (valid_x, valid_y, _) in enumerate(src_valid_loader):
                 valid_x, valid_y = valid_x.to(device), valid_y.to(device)
-                _, valid_prediction = cluda_nn.predict(valid_x, None)
+                valid_prediction = cluda_nn.predict(valid_x, None)
                 src_valid_correct += (valid_prediction.argmax(1) == valid_y).sum().item()
         src_valid_accuracy = src_valid_correct / len(src_valid_loader.dataset)
 
@@ -338,7 +338,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         with torch.no_grad():
             for _, (valid_x, valid_y, _) in enumerate(trg_valid_loader):
                 valid_x, valid_y = valid_x.to(device), valid_y.to(device)
-                _, valid_prediction = cluda_nn.predict(valid_x, None)
+                valid_prediction = cluda_nn.predict(valid_x, None)
                 trg_valid_correct += (valid_prediction.argmax(1) == valid_y).sum().item()
         trg_valid_accuracy = trg_valid_correct / len(trg_valid_loader.dataset)
 
