@@ -214,7 +214,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     if cuda:
         set_random_seeds(seed=seed, cuda=cuda)
         cluda_nn.cuda()
-        augmenter.cuda()
+        # augmenter.cuda()
 
     # Prepare optimizer
     optimizer = torch.optim.Adam(
