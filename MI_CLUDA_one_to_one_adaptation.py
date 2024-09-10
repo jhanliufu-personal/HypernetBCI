@@ -345,11 +345,12 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         train_accuracy_lst.append(train_accuracy)
         src_valid_accuracy_lst.append(src_valid_accuracy)
         trg_valid_accuracy_lst.append(trg_valid_accuracy)
-        src_contrastive_loss_lst.append(batch_avg_loss_s)
-        trg_contrastive_loss_lst.append(batch_avg_loss_t)
-        src_trg_contrastive_loss_lst.append(batch_avg_loss_ts)
-        domain_discrimination_loss_lst.append(batch_avg_disc_loss)
-        src_classification_loss_lst.append(batch_avg_cls_loss)
+        
+        src_contrastive_loss_lst.append(batch_avg_loss_s.cpu().item())
+        trg_contrastive_loss_lst.append(batch_avg_loss_t.cpu().item())
+        src_trg_contrastive_loss_lst.append(batch_avg_loss_ts.cpu().item())
+        domain_discrimination_loss_lst.append(batch_avg_disc_loss.cpu().item())
+        src_classification_loss_lst.append(batch_avg_cls_loss.cpu().item())
 
         print(
             f'[Epoch : {epoch}/{args.n_epochs}] ' 
