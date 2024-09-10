@@ -33,7 +33,7 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 # subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = [2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
@@ -254,9 +254,6 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         # Train for one epoch: Iterate through one training batch from each dataset
         for batch_idx, (src_x, src_y, _) in enumerate(src_train_loader):
 
-            if len(src_x) != args.batch_size:
-                continue
-
             try:
                 trg_x, _, _ = next(trg_train_iter)
             except StopIteration:
@@ -268,6 +265,9 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 )
                 trg_train_iter = iter(trg_train_loader)
                 trg_x, _, _ = next(trg_train_iter)
+
+            if len(src_x) != args.batch_size or len(trg_x) != args.batch_size:
+                continue
 
             optimizer.zero_grad()
             src_x, src_y = src_x.to(device), src_y.to(device)

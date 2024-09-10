@@ -3,7 +3,7 @@
     "dataset_name": "Schirrmeister2017",
     "experiment_version": 1,
     "scenarios": [
-        [1, 2]
+        [2, 3]
     ],
     "n_classes": 4,
     "batch_size": 72,
