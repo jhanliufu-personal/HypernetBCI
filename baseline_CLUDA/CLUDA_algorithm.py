@@ -100,20 +100,24 @@ class CLUDA_NN(nn.Module):
     def _dequeue_and_enqueue(self, keys_s, keys_t):
         #No update during evaluation
         if self.training:
-            # gather keys before updating queue
-            batch_size = keys_s.shape[0]
+            try:
+                # gather keys before updating queue
+                batch_size = keys_s.shape[0]
 
-            ptr = int(self.queue_ptr)
-            #For now, ignore below assertion
-            #assert self.K % batch_size == 0  # for simplicity
+                ptr = int(self.queue_ptr)
+                #For now, ignore below assertion
+                #assert self.K % batch_size == 0  # for simplicity
 
-            # replace the keys at ptr (dequeue and enqueue)
-            self.queue_s[:, ptr:ptr + batch_size] = keys_s.T
-            self.queue_t[:, ptr:ptr + batch_size] = keys_t.T
+                # replace the keys at ptr (dequeue and enqueue)
+                self.queue_s[:, ptr:ptr + batch_size] = keys_s.T
+                self.queue_t[:, ptr:ptr + batch_size] = keys_t.T
 
-            ptr = (ptr + batch_size) % self.K  # move pointer
+                ptr = (ptr + batch_size) % self.K  # move pointer
 
-            self.queue_ptr[0] = ptr
+                self.queue_ptr[0] = ptr
+                
+            except RuntimeError:
+                pass
 
     def forward(self, sequence_q_s, sequence_k_s, static_s, sequence_q_t, sequence_k_t, static_t, alpha):
         """
