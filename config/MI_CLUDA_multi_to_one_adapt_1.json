@@ -4,7 +4,7 @@
     "experiment_version": 1,
     "n_classes": 4,
     "batch_size": 72,
-    "n_epochs": 5,
+    "n_epochs": 50,
     "weight_decay": 1e-4,
     "lr": 1e-4
 }
