@@ -433,7 +433,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             src_x = src_x.to(device)
             batch_embeddings = cluda_nn.get_encoding(src_x)
             for embedding, label in zip(
-                batch_embeddings.detach().numpy(), 
+                batch_embeddings.detach().cpu().numpy(), 
                 src_y.cpu().numpy()
             ):
                 embedding_lst.append(embedding)
