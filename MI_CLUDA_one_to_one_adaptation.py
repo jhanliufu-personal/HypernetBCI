@@ -1,8 +1,10 @@
 import os
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 import pickle as pkl
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.functional import binary_cross_entropy
@@ -316,7 +318,13 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
             train_correct += (pred_s.argmax(1) == src_y).sum().item()
 
             # Backprop
-            total_loss = (0.1 * loss_s + 0.1 * loss_t + 0.2 * loss_ts + 1 * loss_disc + 1 * src_cls_loss)
+            total_loss = (
+                0.1 * loss_s + 
+                0.1 * loss_t + 
+                0.2 * loss_ts + 
+                1 * loss_disc + 
+                1 * src_cls_loss
+            )
             total_loss.backward()
             optimizer.step()
 
@@ -405,4 +413,47 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         pkl.dump(dict_train, f)
 
     # Save the trained model
+    print('Save trained model')
     torch.save(deepcopy(cluda_nn.state_dict()), model_param_path)
+
+    # Calculate embeddings
+    print('Calculate and reduce embeddings to 2D')
+    embedding_lst = []
+    subject_id_lst = []
+    label_lst = []
+    for subject_id, subject_dataset in splitted_by_subj.items():
+
+        # Only calculate embeddings for the source and target subjects
+        if subject_id != source_subject and subject_id!= target_subject:
+            continue
+
+        subject_dataloader = DataLoader(subject_dataset, batch_size=args.batch_size)
+        for _, (src_x, src_y, _) in enumerate(subject_dataloader):
+            cluda_nn.eval()
+            batch_embeddings = cluda_nn.get_encoding(src_x)
+            for embedding, label in zip(
+                batch_embeddings.cpu().numpy(), 
+                src_y.cpu().numpy()
+            ):
+                embedding_lst.append(embedding)
+                label_lst.append(label)
+                subject_id_lst.append(subject_id)
+
+    # Dimensionality reduction
+    tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
+    reduced_embeddings = tsne_model.fit_transform(np.array(embedding_lst))
+    df_embedding = pd.DataFrame({
+        'embedding': embedding_lst, 
+        'reduced_embedding': reduced_embeddings,
+        'subject_id': subject_id_lst, 
+        'label': label_lst
+    })
+    print('Save embeddings')
+    df_embedding.to_pickle(
+        os.path.join(
+            dir_results, 
+            f'{experiment_folder_name}/',
+            f'{temp_exp_name}_{dict_key}_embeddings.pkl'
+        )
+    )
+
