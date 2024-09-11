@@ -430,6 +430,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         subject_dataloader = DataLoader(subject_dataset, batch_size=args.batch_size)
         for _, (src_x, src_y, _) in enumerate(subject_dataloader):
             cluda_nn.eval()
+            src_x = src_x.to(device)
             batch_embeddings = cluda_nn.get_encoding(src_x)
             for embedding, label in zip(
                 batch_embeddings.cpu().numpy(), 
