@@ -19,12 +19,6 @@ from braindecode.preprocessing import (
 )
 from braindecode.datautil import load_concat_dataset
 from braindecode.util import set_random_seeds
-# from baseline_MAPU.models import (
-#     masking, 
-#     myTemporal_Imputer, 
-#     ShallowFBCSPFeatureExtractor
-# )
-# from baseline_MAPU.loss import CrossEntropyLabelSmooth, EntropyLoss
 from baseline_CLUDA.CLUDA_algorithm import CLUDA_NN
 from baseline_CLUDA.CLUDA_augmentations import Augmenter
 from utils import parse_training_config, get_subset
@@ -115,6 +109,14 @@ train_file_path = os.path.join(
 )
 print(f'Saving training outcome at {train_file_path}')
 
+embedding_file_name = f'{experiment_folder_name}_embeddings'
+embedding_file_path = os.path.join(
+    dir_results, 
+    f'{experiment_folder_name}/', 
+    f'{embedding_file_name}.pkl'
+)
+print(f'Saving embeddings at {embedding_file_path}')
+
 ### ----------------------------- Create model -----------------------------
 # Specify which GPU to run on to avoid collisions
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_number
@@ -137,8 +139,9 @@ n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 splitted_by_subj = windows_dataset.split('subject')
 
-# Save training and testing results
+# Save data
 dict_train = {}
+dict_embeddings = {}
 
 if os.path.exists(train_file_path):
     with open(train_file_path, 'rb') as f:
@@ -175,7 +178,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
 
     print(f'Adapt model on source subject {source_subject} to target subject {target_subject}')
     ########################################################
-    ###################### TRAINING #######################
+    ###################### TRAINING ########################
     ########################################################
 
     # Prepare source and target dataset
@@ -440,24 +443,26 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 label_lst.append(label)
                 subject_id_lst.append(subject_id)
 
-    # # Dimensionality reduction
-    # tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
-    # print(len(embedding_lst))
-    # embedding_arr = np.array(embedding_lst)
-    # print(len(embedding_arr))
-    # reduced_embeddings = tsne_model.fit_transform(embedding_arr)
-    df_embedding = pd.DataFrame({
+    df_embeddings = pd.DataFrame({
         'embedding': embedding_lst, 
-        # 'reduced_embedding': reduced_embeddings,
         'subject_id': subject_id_lst, 
         'label': label_lst
     })
-    print('Save embeddings')
-    df_embedding.to_pickle(
-        os.path.join(
-            dir_results, 
-            f'{experiment_folder_name}/',
-            f'{temp_exp_name}_{dict_key}_embeddings.pkl'
-        )
+
+    # Dimensionality reduction
+    tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
+    reduced_embeddings = tsne_model.fit_transform(
+        np.vstack(df_embeddings['embedding'].values)
     )
+    df_embeddings['reduced_embedding'] = reduced_embeddings.tolist()
+
+    print('Save embeddings')
+    dict_embeddings.update({
+        dict_key: df_embeddings
+    })
+
+    if os.path.exists(embedding_file_path):
+        os.remove(embedding_file_path)
+    with open(embedding_file_path, 'wb') as f:
+        pkl.dump(dict_embeddings, f)
 
