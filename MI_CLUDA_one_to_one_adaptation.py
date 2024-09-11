@@ -440,15 +440,15 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
                 label_lst.append(label)
                 subject_id_lst.append(subject_id)
 
-    # Dimensionality reduction
-    tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
-    print(len(embedding_lst))
-    embedding_arr = np.array(embedding_lst)
-    print(len(embedding_arr))
-    reduced_embeddings = tsne_model.fit_transform(embedding_arr)
+    # # Dimensionality reduction
+    # tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
+    # print(len(embedding_lst))
+    # embedding_arr = np.array(embedding_lst)
+    # print(len(embedding_arr))
+    # reduced_embeddings = tsne_model.fit_transform(embedding_arr)
     df_embedding = pd.DataFrame({
         'embedding': embedding_lst, 
-        'reduced_embedding': reduced_embeddings,
+        # 'reduced_embedding': reduced_embeddings,
         'subject_id': subject_id_lst, 
         'label': label_lst
     })
