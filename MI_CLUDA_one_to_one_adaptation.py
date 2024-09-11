@@ -424,7 +424,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
     for subject_id, subject_dataset in splitted_by_subj.items():
 
         # Only calculate embeddings for the source and target subjects
-        if subject_id != source_subject and subject_id!= target_subject:
+        if subject_id != f'{source_subject}' and subject_id!= f'{target_subject}':
             continue
 
         subject_dataloader = DataLoader(subject_dataset, batch_size=args.batch_size)
