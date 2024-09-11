@@ -34,8 +34,8 @@ warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [2, 3]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
