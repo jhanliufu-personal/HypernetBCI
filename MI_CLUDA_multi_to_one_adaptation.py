@@ -1,11 +1,14 @@
 import os
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 import pickle as pkl
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 import torch
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR
+from torch.nn.functional import binary_cross_entropy
+# from torch.optim.lr_scheduler import StepLR
 from braindecode.datasets import MOABBDataset, BaseConcatDataset
 from numpy import multiply
 from braindecode.preprocessing import (
@@ -16,6 +19,8 @@ from braindecode.preprocessing import (
 )
 from braindecode.datautil import load_concat_dataset
 from braindecode.util import set_random_seeds
+from baseline_CLUDA.CLUDA_algorithm import CLUDA_NN
+from baseline_CLUDA.CLUDA_augmentations import Augmenter
 from utils import parse_training_config, get_subset
 
 import warnings
@@ -24,7 +29,6 @@ warnings.filterwarnings('ignore')
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
 subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 if os.path.exists(preprocessed_dir) and os.listdir(preprocessed_dir):
     print('Preprocessed dataset exists')
@@ -91,25 +95,26 @@ else:
     print(f'Dataset saved to {preprocessed_dir}')
 
 dir_results = 'results/'
-experiment_folder_name = f'MI_MAPU_multi_to_one_adaptation_{args.experiment_version}'
-temp_exp_name = 'MAPU_multi_to_one_adapt'
+experiment_folder_name = f'MI_CLUDA_multi_to_one_adaptation_{args.experiment_version}'
+temp_exp_name = 'CLUDA_multi_to_one_adapt'
 # Create expriment folder
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 
-pretrain_file_name = f'{experiment_folder_name}_pretrain_acc'
-results_file_name = f'{experiment_folder_name}_results'
-pretrain_file_path = os.path.join(
+train_file_name = f'{experiment_folder_name}_train_acc'
+train_file_path = os.path.join(
     dir_results, 
     f'{experiment_folder_name}/', 
-    f'{pretrain_file_name}.pkl'
+    f'{train_file_name}.pkl'
 )
-results_file_path = os.path.join(
+print(f'Saving training outcome at {train_file_path}')
+
+embedding_file_name = f'{experiment_folder_name}_embeddings'
+embedding_file_path = os.path.join(
     dir_results, 
     f'{experiment_folder_name}/', 
-    f'{results_file_name}.pkl'
+    f'{embedding_file_name}.pkl'
 )
-print(f'Saving pretrain accuracy at {pretrain_file_path}')
-print(f'Saving results at {results_file_path}')
+print(f'Saving embeddings at {embedding_file_path}')
 
 ### ----------------------------- Create model -----------------------------
 # Specify which GPU to run on to avoid collisions
@@ -133,40 +138,41 @@ n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 splitted_by_subj = windows_dataset.split('subject')
 
-dict_pretrain = {}
-dict_results = {}
+# Save data
+dict_train = {}
+dict_embeddings = {}
 
-# Load existing outputs if they exist
-if os.path.exists(pretrain_file_path):
-    with open(pretrain_file_path, 'rb') as f:
-        dict_pretrain = pkl.load(f)
-
-if os.path.exists(results_file_path):
-    with open(results_file_path, 'rb') as f:
-        dict_results = pkl.load(f)
+if os.path.exists(train_file_path):
+    with open(train_file_path, 'rb') as f:
+        dict_train = pkl.load(f)
 
 # adapt from multiple source subjects to one target subject
 for i, target_subject in enumerate(subject_ids_lst):
 
     dict_key = f'adapt_to_{target_subject}'
 
-    # check if the scenario is done
+    # check if a trained model exists
     model_param_path = os.path.join(
         dir_results, 
         f'{experiment_folder_name}/',
-        f'{temp_exp_name}_{dict_key}_pretrained_model_params.pth'
+        f'{temp_exp_name}_{dict_key}_model_params.pth'
     )
-    figure_title = f'{temp_exp_name}_{dict_key}_pretrain_acc_curve'
-    train_acc_curve_path = os.path.join(
+    acc_figure_title = f'{temp_exp_name}_{dict_key}_acc_curve'
+    acc_curve_path = os.path.join(
         dir_results, 
         f'{experiment_folder_name}/',
-        f'{figure_title}.png'
+        f'{acc_figure_title}.png'
+    )
+    loss_figure_title = f'{temp_exp_name}_{dict_key}_loss_curve'
+    loss_curve_path = os.path.join(
+        dir_results, 
+        f'{experiment_folder_name}/',
+        f'{loss_figure_title}.png'
     )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
-    # Also check if the pretrain accuracy has been saved
     training_done = model_exist and (dict_train.get(dict_key) is not None)
 
-    if dict_results.get(dict_key) is not None:
+    if training_done:
         continue
 
     print(f'Adapt model on multi-sources to target subject {target_subject}')
@@ -174,7 +180,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     ###################### TRAINING ########################
     ########################################################
 
-    # Prepare source dataset
+    # Prepare source and target dataset
     src_dataset = BaseConcatDataset([
         splitted_by_subj.get(f'{i}') 
         for i in subject_ids_lst 
@@ -188,106 +194,281 @@ for i, target_subject in enumerate(subject_ids_lst):
         src_train_set_lst.append(cur_train_set)
         cur_valid_set = subj_splitted_by_run.get('1test')
         src_valid_set_lst.append(cur_valid_set)
-    src_train_dataset = BaseConcatDataset(src_train_set_lst)
-    src_valid_dataset = BaseConcatDataset(src_valid_set_lst)
     src_train_loader = DataLoader(
-        src_train_dataset, 
+        BaseConcatDataset(src_train_set_lst), 
         batch_size=args.batch_size, 
         shuffle=True
     )
     src_valid_loader = DataLoader(
-        src_valid_dataset, 
+        BaseConcatDataset(src_valid_set_lst), 
         batch_size=args.batch_size
     )
-
-    # prepare adaptation and test dataset from target subject
-    target_dataset = splitted_by_subj.get(f'{target_subject}')
-    target_dataset_splitted_by_run = target_dataset.split('run')
-    target_train_dataset = target_dataset_splitted_by_run.get('0train')
-    target_train_loader = DataLoader(
-        target_train_dataset, 
-        batch_size=args.batch_size,
+    trg_dataset = splitted_by_subj.get(f'{target_subject}')
+    trg_dataset_splitted_by_run = trg_dataset.split('run')
+    trg_train_loader = DataLoader(
+        trg_dataset_splitted_by_run.get('0train'), 
+        batch_size=args.batch_size, 
         shuffle=True
     )
-    target_train_iterator = iter(target_train_loader)
-    target_test_dataset = target_dataset_splitted_by_run.get('1test')
-    target_test_loader = DataLoader(
-        target_test_dataset, 
+    trg_train_iter = iter(trg_train_loader)
+    trg_valid_loader = DataLoader(
+        trg_dataset_splitted_by_run.get('1test'), 
         batch_size=args.batch_size
     )
 
+    # Prepare CLUDA_NN
+    embedding_dim = 40
+    cluda_nn = CLUDA_NN(input_window_samples, n_chans, embedding_dim, args.n_classes, 0)
+
+    # Prepare augmenter
+    augmenter = Augmenter(cutout_length=0, cutout_prob=0, dropout_prob=0, is_cuda=cuda)
+    # Tweak augmentation parameters
+    pass
+
+    # Send to GPU
+    if cuda:
+        set_random_seeds(seed=seed, cuda=cuda)
+        cluda_nn.cuda()
+        # augmenter.cuda()
+
+    # Prepare optimizer
+    optimizer = torch.optim.Adam(
+        cluda_nn.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay
+    )
+
+    # Prepare loss functions
+    loss_fn = torch.nn.NLLLoss()
+    criterion_CL = torch.nn.CrossEntropyLoss()
+
+    # Mask, parameter for augmenter
+    sequence_mask = torch.ones([n_chans, input_window_samples])
+    sequence_mask = sequence_mask.to(device)
+
+    train_accuracy_lst = []
+    src_valid_accuracy_lst = []
+    trg_valid_accuracy_lst = []
+    src_contrastive_loss_lst = []
+    trg_contrastive_loss_lst = []
+    src_trg_contrastive_loss_lst = []
+    domain_discrimination_loss_lst = []
+    src_classification_loss_lst = []
+
+    # Training loop
     for epoch in range(1, args.n_epochs + 1):
 
-        for source_batch_idx, (src_x, src_y, _) in enumerate(src_train_loader):
+        cluda_nn.train()
+        train_correct = 0
+        batch_avg_loss_s = 0
+        batch_avg_loss_t = 0
+        batch_avg_loss_ts = 0
+        batch_avg_disc_loss = 0
+        batch_avg_cls_loss = 0
+
+        # Train for one epoch: Iterate through one training batch from each dataset
+        for batch_idx, (src_x, src_y, _) in enumerate(src_train_loader):
 
             try:
-                target_batch = next(target_train_iterator)
+                trg_x, _, _ = next(trg_train_iter)
             except StopIteration:
-                # Since the target set is much smaller, re-initialize if it's exhausted
-                target_train_loader = DataLoader(
-                    target_train_dataset, 
-                    batch_size=args.batch_size,
+                # re-initialize if done emitting data
+                trg_train_loader = DataLoader(
+                    trg_dataset_splitted_by_run.get('0train'), 
+                    batch_size=args.batch_size, 
                     shuffle=True
                 )
-                target_train_iterator = iter(target_train_loader)
-                target_batch = next(target_train_iterator)
+                trg_train_iter = iter(trg_train_loader)
+                trg_x, _, _ = next(trg_train_iter)
 
+            if len(src_x) != args.batch_size or len(trg_x) != args.batch_size:
+                continue
 
+            optimizer.zero_grad()
+            src_x, src_y = src_x.to(device), src_y.to(device)
+            trg_x = trg_x.to(device)
 
-    #     pretrain_accuracy = pretrain_correct / len(src_pretrain_loader.dataset)
-    #     # Save pretrain accuracy
-    #     pretrain_train_acc_lst.append(pretrain_accuracy)
-    #     # Save batch-averaged tov loss
-    #     pretrain_tov_loss_lst.append(batch_avg_tov_loss)
-    #     # Save batch-averaged classification loss
-    #     pretrain_cls_loss_lst.append(batch_avg_cls_loss)
+            # Augmentation
+            # Queue and key sequences for source
+            augmented_src_seq_q, _ = augmenter(src_x, sequence_mask)
+            augmented_src_seq_k, _ = augmenter(src_x, sequence_mask)
 
-    #     # Test model on validation set
-    #     network.eval()
-    #     valid_correct = 0
-    #     with torch.no_grad():
-    #         for _, (valid_x, valid_y, _) in enumerate(src_valid_loader):
-    #             valid_x, valid_y = valid_x.to(device), valid_y.to(device)
-    #             _, valid_prediction = network(valid_x)
-    #             valid_correct += (valid_prediction.argmax(1) == valid_y).sum().item()
+            # Queue and key sequences for target
+            augmented_trg_seq_q, _ = augmenter(trg_x, sequence_mask)
+            augmented_trg_seq_k, _ = augmenter(trg_x, sequence_mask)
 
-    #     # Save validation accuracy
-    #     valid_accuracy = valid_correct / len(src_valid_loader.dataset)
-    #     pretrain_test_acc_lst.append(valid_accuracy)
-    #     print(
-    #         f'[Epoch : {epoch}/{args.pretrain_n_epochs}] ' 
-    #         f'training accuracy = {100 * pretrain_accuracy:.1f}% ' 
-    #         f'validation accuracy = {100 * valid_accuracy:.1f}% '
-    #         f'tov_loss = {batch_avg_tov_loss: .3e} '
-    #         f'classification_loss = {batch_avg_cls_loss: .3e} '
-    #     )
+            # Foward pass
+            # No idea what p and alpha are
+            p = float(batch_idx) / 1000
+            alpha = 2. / (1. + np.exp(-10 * p)) - 1
+            (
+                output_s, target_s, 
+                output_t, target_t, 
+                output_ts, target_ts, 
+                output_disc, target_disc, 
+                pred_s
+            ) = cluda_nn(
+                augmented_src_seq_q, 
+                augmented_src_seq_k, 
+                None, 
+                augmented_trg_seq_q, 
+                augmented_trg_seq_k, 
+                None, 
+                alpha
+            )
 
-    # Plot and save the pretraining accuracy curves
+            # Loss calculation
+            loss_s = criterion_CL(output_s, target_s)
+            batch_avg_loss_s = (batch_avg_loss_s * batch_idx + loss_s) / (batch_idx + 1)
+            loss_t = criterion_CL(output_t, target_t)
+            batch_avg_loss_t = (batch_avg_loss_t * batch_idx + loss_t) / (batch_idx + 1)
+            loss_ts = criterion_CL(output_ts, target_ts)
+            batch_avg_loss_ts = (batch_avg_loss_ts * batch_idx + loss_ts) / (batch_idx + 1)
+            loss_disc = binary_cross_entropy(output_disc, target_disc)
+            batch_avg_disc_loss = (batch_avg_disc_loss * batch_idx + loss_disc) / (batch_idx + 1)
+            src_cls_loss = loss_fn(pred_s, src_y)
+            batch_avg_cls_loss = (batch_avg_cls_loss * batch_idx + src_cls_loss) / (batch_idx + 1)
+            train_correct += (pred_s.argmax(1) == src_y).sum().item()
+
+            # Backprop
+            total_loss = (
+                0.1 * loss_s + 
+                0.1 * loss_t + 
+                0.2 * loss_ts + 
+                1 * loss_disc + 
+                1 * src_cls_loss
+            )
+            total_loss.backward()
+            optimizer.step()
+
+        # Calculate train accuracy
+        train_accuracy = train_correct / len(src_train_loader.dataset)
+
+        # Test model on source and target validation set
+        cluda_nn.eval()
+
+        src_valid_correct = 0
+        with torch.no_grad():
+            for _, (valid_x, valid_y, _) in enumerate(src_valid_loader):
+                valid_x, valid_y = valid_x.to(device), valid_y.to(device)
+                valid_prediction = cluda_nn.predict(valid_x, None)
+                src_valid_correct += (valid_prediction.argmax(1) == valid_y).sum().item()
+        src_valid_accuracy = src_valid_correct / len(src_valid_loader.dataset)
+
+        trg_valid_correct = 0
+        with torch.no_grad():
+            for _, (valid_x, valid_y, _) in enumerate(trg_valid_loader):
+                valid_x, valid_y = valid_x.to(device), valid_y.to(device)
+                valid_prediction = cluda_nn.predict(valid_x, None)
+                trg_valid_correct += (valid_prediction.argmax(1) == valid_y).sum().item()
+        trg_valid_accuracy = trg_valid_correct / len(trg_valid_loader.dataset)
+
+        train_accuracy_lst.append(train_accuracy)
+        src_valid_accuracy_lst.append(src_valid_accuracy)
+        trg_valid_accuracy_lst.append(trg_valid_accuracy)
+        
+        src_contrastive_loss_lst.append(batch_avg_loss_s.cpu().item())
+        trg_contrastive_loss_lst.append(batch_avg_loss_t.cpu().item())
+        src_trg_contrastive_loss_lst.append(batch_avg_loss_ts.cpu().item())
+        domain_discrimination_loss_lst.append(batch_avg_disc_loss.cpu().item())
+        src_classification_loss_lst.append(batch_avg_cls_loss.cpu().item())
+
+        print(
+            f'[Epoch : {epoch}/{args.n_epochs}] ' 
+            f'training accuracy = {100 * train_accuracy:.1f}% ' 
+            f'source validation accuracy = {100 * src_valid_accuracy:.1f}% '
+            f'target validation accuracy = {100 * trg_valid_accuracy:.1f}% '
+        )
+
+    # Plot loss (all components) and accuracy (source train, source valid, target valid) curves
     plt.figure()
-    plt.plot(pretrain_train_acc_lst, label='Training accuracy')
-    plt.plot(pretrain_test_acc_lst, label='Validation accuracy')
+    plt.plot(train_accuracy_lst, label='Train acc')
+    plt.plot(src_valid_accuracy_lst, label='Valid. acc (source)')
+    plt.plot(trg_valid_accuracy_lst, label='Valid. acc (target)')
     plt.legend()
     plt.xlabel('Training epochs')
     plt.ylabel('Accuracy')
-    plt.title(figure_title)
+    plt.title(acc_figure_title)
     plt.tight_layout()
-    plt.savefig(pretrain_acc_curve_path)
+    plt.savefig(acc_curve_path)
     plt.close()
 
-    # Save pretraining accuracies
-    dict_pretrain.update({
+    plt.figure()
+    plt.plot(src_contrastive_loss_lst, label='Source contrastive loss')
+    plt.plot(trg_contrastive_loss_lst, label='Target contrastive loss')
+    plt.plot(src_trg_contrastive_loss_lst, label='Cross-domain contrastive loss')
+    plt.plot(domain_discrimination_loss_lst, label='Domain disc. loss')
+    plt.plot(src_classification_loss_lst, label='Source classification loss')
+    plt.legend()
+    plt.xlabel('Training epochs')
+    plt.ylabel('Loss')
+    plt.title(loss_figure_title)
+    plt.tight_layout()
+    plt.savefig(loss_curve_path)
+    plt.close()
+
+    # Save loss and accuracy data
+    dict_train.update({
         dict_key: {
-            'pretrain_test_acc': pretrain_test_acc_lst,
-            'pretrain_train_acc': pretrain_train_acc_lst,
-            'pretrain_tov_loss': pretrain_tov_loss_lst,
-            'pretrain_cls_loss': pretrain_cls_loss_lst
+            'train_accuracy': train_accuracy_lst,
+            'src_valid_accuracy': src_valid_accuracy_lst,
+            'trg_valid_accuracy': trg_valid_accuracy_lst,
+            'src_contrastive_loss': src_contrastive_loss_lst,
+            'trg_contrastive_loss': trg_contrastive_loss_lst,
+            'src_trg_contrastive_loss': src_trg_contrastive_loss_lst,
+            'domain_discrimination_loss': domain_discrimination_loss_lst,
+            'src_prediction_loss': src_classification_loss_lst
         }
     })
-    if os.path.exists(pretrain_file_path):
-        os.remove(pretrain_file_path)
-    with open(pretrain_file_path, 'wb') as f:
-        pkl.dump(dict_pretrain, f)
+    if os.path.exists(train_file_path):
+        os.remove(train_file_path)
+    with open(train_file_path, 'wb') as f:
+        pkl.dump(dict_train, f)
 
-    # Save the source pretrained model and temporal verifier
-    src_only_model = deepcopy(network.state_dict())
-    torch.save(src_only_model, model_param_path)
+    # Save the trained model
+    print('Save trained model')
+    torch.save(deepcopy(cluda_nn.state_dict()), model_param_path)
+
+    # Calculate embeddings
+    print('Calculate and reduce embeddings to 2D')
+    embedding_lst = []
+    subject_id_lst = []
+    label_lst = []
+    for subject_id, subject_dataset in splitted_by_subj.items():
+
+        subject_dataloader = DataLoader(subject_dataset, batch_size=args.batch_size)
+        for _, (src_x, src_y, _) in enumerate(subject_dataloader):
+            cluda_nn.eval()
+            src_x = src_x.to(device)
+            batch_embeddings = cluda_nn.get_encoding(src_x)
+            for embedding, label in zip(
+                batch_embeddings.detach().cpu().numpy(), 
+                src_y.cpu().numpy()
+            ):
+                embedding_lst.append(embedding)
+                label_lst.append(label)
+                subject_id_lst.append(subject_id)
+
+    df_embeddings = pd.DataFrame({
+        'embedding': embedding_lst, 
+        'subject_id': subject_id_lst, 
+        'label': label_lst
+    })
+
+    # Dimensionality reduction
+    tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
+    reduced_embeddings = tsne_model.fit_transform(
+        np.vstack(df_embeddings['embedding'].values)
+    )
+    df_embeddings['reduced_embedding'] = reduced_embeddings.tolist()
+
+    print('Save embeddings')
+    dict_embeddings.update({
+        dict_key: df_embeddings
+    })
+
+    if os.path.exists(embedding_file_path):
+        os.remove(embedding_file_path)
+    with open(embedding_file_path, 'wb') as f:
+        pkl.dump(dict_embeddings, f)
+

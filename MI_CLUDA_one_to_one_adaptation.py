@@ -145,7 +145,7 @@ dict_embeddings = {}
 
 if os.path.exists(train_file_path):
     with open(train_file_path, 'rb') as f:
-        dict_results = pkl.load(f)
+        dict_train = pkl.load(f)
 
 # adapt from one subject to another, not multi-source
 for i, (source_subject, target_subject) in enumerate(args.scenarios):
@@ -171,7 +171,7 @@ for i, (source_subject, target_subject) in enumerate(args.scenarios):
         f'{loss_figure_title}.png'
     )
     model_exist = os.path.exists(model_param_path) and os.path.getsize(model_param_path) > 0
-    training_done = model_exist and (dict_results.get(dict_key) is not None)
+    training_done = model_exist and (dict_train.get(dict_key) is not None)
 
     if training_done:
         continue
