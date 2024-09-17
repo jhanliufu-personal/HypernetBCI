@@ -166,7 +166,7 @@ for subject_id, subject_dataset in splitted_by_subj.items():
             batch_embeddings.detach().cpu().numpy(), 
             src_y.cpu().numpy()
         ):
-            embedding_lst.append(embedding)
+            embedding_lst.append(embedding.flatten())
             label_lst.append(label)
             subject_id_lst.append(subject_id)
 
