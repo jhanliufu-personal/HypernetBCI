@@ -44,6 +44,16 @@ classes = list(range(n_classes))
 n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
+cuda = torch.cuda.is_available()
+device_count = torch.cuda.device_count()
+if cuda:
+    print(f'{device_count} CUDA devices available, use GPU')
+    torch.backends.cudnn.benchmark = True
+    device = 'cuda'
+else:
+    print('No CUDA available, use CPU')
+    device = 'cpu'
+
 training_done = os.path.exists(acc_curve_path) and os.path.exists(model_param_path)
 if not training_done:
 
@@ -61,16 +71,6 @@ if not training_done:
     )
 
     # Prepare model
-    cuda = torch.cuda.is_available()
-    device_count = torch.cuda.device_count()
-    if cuda:
-        print(f'{device_count} CUDA devices available, use GPU for training')
-        torch.backends.cudnn.benchmark = True
-        device = 'cuda'
-    else:
-        print('No CUDA available, use CPU for training')
-        device = 'cpu'
-
     model = ShallowFBCSPNet(
         n_chans,
         n_classes,
