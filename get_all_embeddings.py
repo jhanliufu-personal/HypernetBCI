@@ -168,6 +168,8 @@ for subject_id, subject_dataset in splitted_by_subj.items():
             label_lst.append(label)
             subject_id_lst.append(subject_id)
 
+print(embedding_lst[0])
+
 df_embeddings = pd.DataFrame({
     'embedding': embedding_lst, 
     'subject_id': subject_id_lst, 
