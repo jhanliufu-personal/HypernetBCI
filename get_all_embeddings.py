@@ -136,6 +136,8 @@ if not training_done:
     # Save the trained model
     print('Save trained model')
     torch.save(deepcopy(model.state_dict()), model_param_path)
+else:
+    print('Training done')
 
 # Create encoder and load trained model weights
 encoder = ShallowFBCSPEncoder(
