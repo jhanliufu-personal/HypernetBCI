@@ -44,8 +44,7 @@ classes = list(range(n_classes))
 n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
-training_done = None
-pass
+training_done = os.path.exists(acc_curve_path) and os.path.exists(model_param_path)
 if not training_done:
 
     # Create datasets
