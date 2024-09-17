@@ -11,7 +11,8 @@ from baseline_CLUDA.CLUDA_models import ShallowFBCSPEncoder
 import matplotlib.pyplot as plt
 from utils import train_one_epoch, test_model
 
-subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
@@ -19,7 +20,7 @@ n_classes = 4
 batch_size = 72
 lr = 6.5e-4
 weight_decay = 0
-n_epochs = 30
+n_epochs = 5
 experiment_version = 1
 
 dir_results = 'results/'
