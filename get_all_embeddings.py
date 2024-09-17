@@ -159,7 +159,7 @@ for subject_id, subject_dataset in splitted_by_subj.items():
 
     subject_dataloader = DataLoader(subject_dataset, batch_size=batch_size)
     for _, (src_x, src_y, _) in enumerate(subject_dataloader):
-        model.eval()
+        encoder.eval()
         src_x = src_x.to(device)
         batch_embeddings = encoder(src_x)
         for embedding, label in zip(
