@@ -243,7 +243,7 @@ def train_one_epoch(
     loss_fn, 
     optimizer,
     scheduler: LRScheduler, 
-    warmup_scheduler: None,
+    # warmup_scheduler: None,
     epoch: int, 
     device="cuda", 
     print_batch_stats=False,
@@ -294,8 +294,8 @@ def train_one_epoch(
             )
 
     # Update the learning rate
-    with warmup_scheduler.dampening() if warmup_scheduler is not None else nullcontext():
-        scheduler.step()
+    # with warmup_scheduler.dampening() if warmup_scheduler is not None else nullcontext():
+    scheduler.step()
 
 
     correct /= len(dataloader.dataset)
