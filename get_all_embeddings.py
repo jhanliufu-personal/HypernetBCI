@@ -11,8 +11,8 @@ from baseline_CLUDA.CLUDA_models import ShallowFBCSPEncoder
 import matplotlib.pyplot as plt
 from utils import train_one_epoch, test_model
 
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
@@ -20,7 +20,7 @@ n_classes = 4
 batch_size = 72
 lr = 6.5e-4
 weight_decay = 0
-n_epochs = 5
+n_epochs = 30
 experiment_version = 1
 
 dir_results = 'results/'
@@ -170,7 +170,7 @@ for subject_id, subject_dataset in splitted_by_subj.items():
             label_lst.append(label)
             subject_id_lst.append(subject_id)
 
-print(embedding_lst[0])
+# print(embedding_lst[0])
 
 df_embeddings = pd.DataFrame({
     'embedding': embedding_lst, 
