@@ -333,9 +333,9 @@ def test_model(
         X, y = X.to(device), y.to(device)
         pred = model(X, **forward_pass_kwargs)
 
-        print(pred)
-        print('---------------------')
-        print(y)
+        # print(pred)
+        # print('---------------------')
+        # print(y)
 
         if optimize_for_acc:
             acc_loss = loss_fn(pred, y).item()
