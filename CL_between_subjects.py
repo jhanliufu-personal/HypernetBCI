@@ -164,14 +164,16 @@ if not training_done:
 
             optimizer.zero_grad()
             # Feed through encoder
-            embeddings = encoder(batch_x)
+            predictions = encoder(batch_x)
+            embeddings = encoder.get_embeddings()
+            
             # Get embedding at the last timestamp
             embeddings = embeddings.squeeze(-1)[:,:,-1]
 
             # Inter-subject contrastive loss
             emb_loss = emb_loss_fn(embeddings)
             # Classification loss
-            pred_loss = pred_loss_fn(encoder.predictions, batch_y)
+            pred_loss = pred_loss_fn(predictions, batch_y)
             # total loss
             total_loss = emb_loss_weight * emb_loss + pred_loss_weight * pred_loss
 
@@ -182,7 +184,7 @@ if not training_done:
             overall_loss += total_loss.item()
             prediction_loss += pred_loss.item()
             embedding_loss += emb_loss.item()
-            correct += (encoder.predictions.argmax(1) == batch_y).sum().item()
+            correct += (predictions.argmax(1) == batch_y).sum().item()
 
         # Calculate train accuracy
         overall_loss /=  train_sample_cnt

@@ -107,12 +107,16 @@ class ShallowFBCSPEncoder(nn.Module):
 
     def forward(self, x):
         self.predictions = self.model(x)
-        # assert self.output.shape[1:] == self.embedding_shape, (
-        #     f'output embedding has wrong shape ({self.output.shape[1:]}) ' +
-        #     f'correct embedding shape is {self.embedding_shape}'
-        # )
-        return self.output
+        # # assert self.output.shape[1:] == self.embedding_shape, (
+        # #     f'output embedding has wrong shape ({self.output.shape[1:]}) ' +
+        # #     f'correct embedding shape is {self.embedding_shape}'
+        # # )
+        # return self.output
+        return self.predictions
     
+    def get_embeddings(self):
+        return self.output
+
     def close_hook(self):
         self.hook.remove()
 
