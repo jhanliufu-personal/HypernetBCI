@@ -21,6 +21,8 @@ batch_size = 72
 lr = 6.5e-4
 weight_decay = 0
 n_epochs = 30
+
+gpu_number = '0'
 experiment_version = 1
 
 dir_results = 'results/'
@@ -44,6 +46,7 @@ classes = list(range(n_classes))
 n_chans = windows_dataset[0][0].shape[0]
 input_window_samples = windows_dataset[0][0].shape[1]
 
+os.environ["CUDA_VISIBLE_DEVICES"] = gpu_number
 cuda = torch.cuda.is_available()
 device_count = torch.cuda.device_count()
 if cuda:
@@ -65,7 +68,7 @@ if not training_done:
         shuffle=True
     )
     test_loader = DataLoader(
-        splitted_by_run.get('0train'), 
+        splitted_by_run.get('1test'), 
         batch_size=batch_size, 
         shuffle=True
     )
