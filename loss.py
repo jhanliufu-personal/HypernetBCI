@@ -45,6 +45,7 @@ class contrastive_loss_btw_subject(torch.nn.Module):
 
         self.positive_mask = self._create_positive_mask()
         self.negative_mask = self._create_negative_mask()
+        self.labels = torch.zeros(self.batch_size).to(self.device).long()
         self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     def _create_positive_mask(self):
@@ -91,7 +92,7 @@ class contrastive_loss_btw_subject(torch.nn.Module):
         logits = torch.cat((positives, negatives), dim=1)
         logits /= self.temperature
 
-        labels = torch.zeros(self.batch_size).long()
-        loss = self.criterion(logits, labels)
+        
+        loss = self.criterion(logits, self.labels)
 
         return loss / self.batch_size
