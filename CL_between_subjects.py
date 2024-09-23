@@ -23,11 +23,11 @@ lr = 6.5e-4
 weight_decay = 0
 n_epochs = 30
 temperature = 0.5
-emb_loss_weight = 0.3
-pred_loss_weight = 0.7
+emb_loss_weight = 1
+pred_loss_weight = 0
 
-gpu_number = '1'
-experiment_version = 3
+gpu_number = '0'
+experiment_version = 4
 
 dir_results = 'results/'
 experiment_folder_name = f'CL_between_subjects_{experiment_version}'
