@@ -87,6 +87,7 @@ if not training_done:
         })
     # Approximate number of batches in each epoch
     n_batches = len(train_dataset) // batch_size
+    print(f'{n_batches} batches per epoch')
 
     # Prepare dataloader iterator for each subject
     for k, v in dataset_splitted_by_subject.items():
