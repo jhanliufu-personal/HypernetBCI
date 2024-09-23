@@ -26,7 +26,7 @@ temperature = 0.5
 emb_loss_weight = 0.5
 pred_loss_weight = 0.5
 
-gpu_number = 0
+gpu_number = '0'
 experiment_version = 1
 
 dir_results = 'results/'
