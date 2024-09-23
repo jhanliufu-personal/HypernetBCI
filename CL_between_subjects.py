@@ -21,7 +21,7 @@ n_classes = 4
 batch_size = 32
 lr = 6.5e-4
 weight_decay = 0
-n_epochs = 30
+n_epochs = 5
 temperature = 0.5
 emb_loss_weight = 0.5
 pred_loss_weight = 0.5
@@ -202,7 +202,7 @@ if not training_done:
             f"Train Accuracy: {100 * train_accuracy:.2f}%, "
             # f"Average Train Loss: {overall_loss:.6f}, "
             f"Average Prediction Loss: {prediction_loss:.6f}, "
-            f"Average Contrastive Loss: {embedding_loss:.6f}"
+            f"Average Contrastive Loss: {embedding_loss:.6f}, "
             f"Test Accuracy: {100 * test_accuracy:.1f}%, "
             f"Average Test Loss: {test_loss:.6f}\n"
         )
@@ -236,7 +236,7 @@ if not training_done:
 
     # Save the trained model
     print('Save trained model')
-    torch.save(deepcopy(encoder.state_dict()), model_param_path)
+    torch.save(deepcopy(encoder.model.state_dict()), model_param_path)
 else:
     print('Training done')
 
