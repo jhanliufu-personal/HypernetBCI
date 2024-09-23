@@ -34,6 +34,7 @@ def nt_xent_loss(embeddings, labels, temperature=0.5):
 class contrastive_loss_btw_subject(torch.nn.Module):
 
     def __init__(self, subject_cnt, emb_cnt_per_subj, batch_size, temperature=0.5, device='cuda'):
+        super(contrastive_loss_btw_subject, self).__init__()
         assert subject_cnt * emb_cnt_per_subj == batch_size, 'Batch size does not match'
         self.subject_cnt = subject_cnt
         self.emb_cnt_per_subj = emb_cnt_per_subj
