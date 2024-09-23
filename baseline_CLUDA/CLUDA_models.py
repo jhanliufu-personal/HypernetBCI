@@ -91,6 +91,7 @@ class ShallowFBCSPEncoder(nn.Module):
         ) -> None:
         super(ShallowFBCSPEncoder, self).__init__()  
         self.output = None
+        self.predictions = None
         # self.embedding_shape = embedding_shape
         self.model = ShallowFBCSPNet(
             sample_shape[0],
@@ -105,7 +106,7 @@ class ShallowFBCSPEncoder(nn.Module):
         self.output = output
 
     def forward(self, x):
-        _ = self.model(x)
+        self.predictions = self.model(x)
         # assert self.output.shape[1:] == self.embedding_shape, (
         #     f'output embedding has wrong shape ({self.output.shape[1:]}) ' +
         #     f'correct embedding shape is {self.embedding_shape}'
