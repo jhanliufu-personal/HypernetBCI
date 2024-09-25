@@ -226,6 +226,8 @@ For each subject, try everyone else's model
 dict_results = {}
 for subject_id in subject_ids_lst:
 
+    print(f'Testing with data from subject {subject_id}')
+
     subject_dataset = dataset_splitted_by_subject.get(f'{subject_id}')
     subject_dataset_splitted_by_run = subject_dataset.split('run')
     subject_test_loader = DataLoader(
@@ -239,6 +241,8 @@ for subject_id in subject_ids_lst:
         if other_subject_id == subject_id:
             test_accuracy_by_other_subject.append(1)
             continue
+
+        print(f'Using model from subject {other_subject_id}')
 
         other_subject_model = ShallowFBCSPNet(
             n_chans,
@@ -263,6 +267,10 @@ for subject_id in subject_ids_lst:
             print_batch_stats=False
         )
         test_accuracy_by_other_subject.append(test_accuracy)
+
+    dict_results.update({
+        subject_id: test_accuracy_by_other_subject
+    })
 
     if os.path.exists(results_file_path):
         os.remove(results_file_path)
