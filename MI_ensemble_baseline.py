@@ -153,7 +153,7 @@ for subject_id in subject_ids_lst:
             n_chans,
             args.n_classes,
             input_window_samples=input_window_samples,
-            **(args.model_kwargs)
+            # **(args.model_kwargs)
         )
         if cuda:
             cur_model.cuda()
@@ -243,7 +243,7 @@ for subject_id in subject_ids_lst:
             n_chans,
             args.n_classes,
             input_window_samples=input_window_samples,
-            **(args.model_kwargs)
+            # **(args.model_kwargs)
         )
         other_subject_model_param_path = os.path.join(
             dir_results, 
