@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from copy import deepcopy
 from braindecode.datasets import MOABBDataset
+from braindecode.models import ShallowFBCSPNet
 from braindecode.preprocessing import (
     Preprocessor,
     exponential_moving_standardize,
@@ -23,7 +24,7 @@ warnings.filterwarnings('ignore')
 
 ### ----------------------------- Experiment parameters -----------------------------
 args = parse_training_config()
-model_object = import_model(args.model_name)
+# model_object = import_model(args.model_name)
 # subject_ids_lst = list(range(1, 14))
 subject_ids_lst = [1, 2]
 
@@ -149,7 +150,7 @@ for subject_id in subject_ids_lst:
         )
 
         set_random_seeds(seed=seed, cuda=cuda)
-        cur_model = model_object(
+        cur_model = ShallowFBCSPNet(
             n_chans,
             args.n_classes,
             input_window_samples=input_window_samples,
@@ -239,7 +240,7 @@ for subject_id in subject_ids_lst:
             test_accuracy_by_other_subject.append(1)
             continue
 
-        other_subject_model = model_object(
+        other_subject_model = ShallowFBCSPNet(
             n_chans,
             args.n_classes,
             input_window_samples=input_window_samples,
