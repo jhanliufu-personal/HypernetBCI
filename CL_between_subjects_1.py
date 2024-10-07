@@ -96,7 +96,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     for k, v in dataset_splitted_by_subject.items():
 
         if k == f'{target_subject}':
-            print(f'Excluding data from subject {target_subject}')
+            print(f'Excluding data from target subject {target_subject}')
             continue
 
         subject_splitted_by_run = v.split('run')
