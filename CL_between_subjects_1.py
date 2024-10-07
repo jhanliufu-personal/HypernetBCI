@@ -211,7 +211,7 @@ for i, target_subject in enumerate(subject_ids_lst):
         print('Save trained support encoder')
         torch.save(deepcopy(support_encoder.model.state_dict()), support_encoder_path)
 
-    if os.path.exists(embeddings_path) and os.path.getsize(embeddings_path) > 0:
+    if dict_embeddings.get(dict_key) is not None:
         print(f'Embeddings by this support encoder have been reduced and saved')
         support_encoder.model.load_state_dict(torch.load(support_encoder_path))
     else:
