@@ -253,8 +253,6 @@ for i, target_subject in enumerate(subject_ids_lst):
         dict_embeddings.update({
             dict_key: df_embeddings
         })
-        if os.path.exists(embeddings_path):
-            os.remove(embeddings_path)
         with open(embeddings_path, 'wb') as f:
             pkl.dump(dict_embeddings, f)
 
@@ -342,8 +340,6 @@ for i, target_subject in enumerate(subject_ids_lst):
             'valid_accuracy': valid_acc_lst
         }
     })
-    if os.path.exists(training_record_path):
-        os.remove(training_record_path)
     with open(training_record_path, 'wb') as f:
         pkl.dump(dict_training, f)
 
@@ -362,8 +358,6 @@ for i, target_subject in enumerate(subject_ids_lst):
     dict_results.update({
         dict_key: target_acc
     })
-    if os.path.exists(results_path):
-        os.remove(results_path)
     with open(results_path, 'wb') as f:
         pkl.dump(dict_results, f)
 
