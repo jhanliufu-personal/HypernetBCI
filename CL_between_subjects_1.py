@@ -268,7 +268,8 @@ for i, target_subject in enumerate(subject_ids_lst):
             # This shoudn't be manual
             torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
             torch.nn.LogSoftmax(dim=1)
-        )
+        ),
+        batch_size=batch_size
     )
     if cuda:
         supportnet.cuda()
