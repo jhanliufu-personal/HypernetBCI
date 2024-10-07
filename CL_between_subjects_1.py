@@ -15,13 +15,13 @@ from models.Supportnet import Supportnet
 from utils import freeze_all_param_but, train_one_epoch, test_model, load_from_pickle
 from loss import contrastive_loss_btw_subject
 
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2, 3]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
 n_classes = 4
-batch_size = 72
+batch_size = 78
 lr = 6.5e-4
 weight_decay = 0
 n_epochs = 30
