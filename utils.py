@@ -9,6 +9,7 @@ import argparse
 import json
 import pickle as pkl
 from contextlib import nullcontext
+import os
 
 import torch
 from tqdm import tqdm
@@ -140,6 +141,9 @@ def clf_predict_on_set(clf, dataset):
 
 
 def load_from_pickle(path):
+    if not os.path.exists(path):
+        return None
+
     with open(path, 'rb') as f:
         dict_rtn = pkl.load(path)
     return dict_rtn
