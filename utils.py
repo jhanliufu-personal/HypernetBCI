@@ -7,6 +7,7 @@ from numbers import Integral
 import numpy as np
 import argparse
 import json
+import pickle as pkl
 from contextlib import nullcontext
 
 import torch
@@ -136,6 +137,12 @@ def clf_predict_on_set(clf, dataset):
     predicted_correct = np.equal(predicted_labels, true_labels)
     prediction_acc = np.sum(predicted_correct) / len(predicted_correct)
     return prediction_acc
+
+
+def load_from_pickle(path):
+    with open(path, 'rb') as f:
+        dict_rtn = pkl.load(path)
+    return dict_rtn
 
 
 def parse_training_config():
@@ -296,7 +303,6 @@ def train_one_epoch(
     # Update the learning rate
     # with warmup_scheduler.dampening() if warmup_scheduler is not None else nullcontext():
     scheduler.step()
-
 
     correct /= len(dataloader.dataset)
     return train_loss / len(dataloader), correct

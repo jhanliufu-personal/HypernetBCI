@@ -1,3 +1,8 @@
+'''
+This script only does the contrastive learning between people. 
+Use later versions to do both that and classification.
+'''
+
 import os
 import torch
 import pandas as pd

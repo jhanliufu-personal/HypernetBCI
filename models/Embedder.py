@@ -65,6 +65,7 @@ class EEGConformerEmbedder(Embedder):
         
         return features
 
+
 class ShallowFBCSPEmbedder(Embedder):
     def __init__(
             self, 
@@ -96,6 +97,45 @@ class ShallowFBCSPEmbedder(Embedder):
         )
         return self.output
     
+    def close_hook(self):
+        self.hook.remove()
+
+
+class ShallowFBCSPEncoder(torch.nn.Module):
+    def __init__(
+            self, 
+            sample_shape: torch.Size, 
+            layer_name: str,
+            n_classes: int
+        ) -> None:
+        super(ShallowFBCSPEncoder, self).__init__()  
+        self.output = None
+        self.predictions = None
+        # self.embedding_shape = embedding_shape
+        self.model = ShallowFBCSPNet(
+            sample_shape[0],
+            n_classes,
+            input_window_samples=sample_shape[1],
+            final_conv_length="auto"
+        )
+        self.layer_name = layer_name
+        self.hook = getattr(self.model, layer_name).register_forward_hook(self.hook_fn)
+
+    def hook_fn(self, module, input, output):
+        self.output = output
+
+    def forward(self, x):
+        self.predictions = self.model(x)
+        # # assert self.output.shape[1:] == self.embedding_shape, (
+        # #     f'output embedding has wrong shape ({self.output.shape[1:]}) ' +
+        # #     f'correct embedding shape is {self.embedding_shape}'
+        # # )
+        # return self.output
+        return self.predictions
+    
+    def get_embeddings(self):
+        return self.output
+
     def close_hook(self):
         self.hook.remove()
 
