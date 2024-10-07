@@ -145,7 +145,7 @@ def load_from_pickle(path):
         return {}
 
     with open(path, 'rb') as f:
-        dict_rtn = pkl.load(path)
+        dict_rtn = pkl.load(f)
     return dict_rtn
 
 
