@@ -279,8 +279,8 @@ def train_one_epoch(
         pred = model(X, **forward_pass_kwargs)
         
         if optimize_for_acc:
-            print(pred.shape)
-            print(y.shape)
+            # print(pred.shape)
+            # print(y.shape)
             acc_loss = loss_fn(pred, y)
         else:
             acc_loss = 0

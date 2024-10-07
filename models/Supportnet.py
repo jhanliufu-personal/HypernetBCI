@@ -8,17 +8,18 @@ import torch
 
 
 class Supportnet(torch.nn.Module):
-    def __init__(self, support_encoder, encoder, classifier, batch_size) -> None:
+    def __init__(self, support_encoder, encoder, classifier) -> None:
         super(Supportnet, self).__init__() 
         self.support_encoder = support_encoder
         self.encoder = encoder
         self.classifier = classifier
-        self.batch_size = batch_size
+        # self.batch_size = batch_size
 
     def concatenate_embeddings(self, support_emb, emb):
         # support_emb assumed to have shape [40, 144, 1]; reshaped to [40]
         support_emb = support_emb.squeeze(-1)[:,:,-1]
-        support_emb_broadcasted = support_emb.view(self.batch_size, 40, 1, 1).expand(-1, -1, 144, 1)
+        cur_batch_size = support_emb.size(0)
+        support_emb_broadcasted = support_emb.view(cur_batch_size, 40, 1, 1).expand(-1, -1, 144, 1)
         # the concated embedding should have shape [80, 144, 1]
         return torch.cat((emb, support_emb_broadcasted), dim=1)
     
