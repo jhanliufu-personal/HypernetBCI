@@ -142,7 +142,7 @@ def clf_predict_on_set(clf, dataset):
 
 def load_from_pickle(path):
     if not os.path.exists(path):
-        return None
+        return {}
 
     with open(path, 'rb') as f:
         dict_rtn = pkl.load(path)
