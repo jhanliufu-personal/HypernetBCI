@@ -29,5 +29,5 @@ class Supportnet(torch.nn.Module):
         embedding = self.encoder.get_embeddings()
 
         concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
-        return self.classifier(concatenated_embedding)
+        return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
 
