@@ -86,7 +86,7 @@ for i, target_subject in enumerate(subject_ids_lst):
 
     support_encoder_path = os.path.join(dir_results, f'{experiment_folder_name}/', f'{dict_key}_support_encoder.pth')
     supportnet_path = os.path.join(dir_results, f'{experiment_folder_name}/', f'{dict_key}_supportnet.pth')
-    print(f'Adapt model on multi-sources to target subject {target_subject}')
+    print(f'Adapt model from multiple sources to target subject {target_subject}')
 
     # Create training (subject specific) and validation dataloaders
     dict_src_subject_loader = {}
@@ -96,6 +96,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     for k, v in dataset_splitted_by_subject.items():
 
         if k == f'{target_subject}':
+            print(f'Excluding data from subject {target_subject}')
             continue
 
         subject_splitted_by_run = v.split('run')
