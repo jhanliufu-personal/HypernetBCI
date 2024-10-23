@@ -15,8 +15,8 @@ from models.Supportnet import Supportnet
 from utils import freeze_all_param_but, train_one_epoch, test_model, load_from_pickle
 from loss import contrastive_loss_btw_subject
 
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2, 3]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
@@ -30,7 +30,7 @@ emb_loss_weight = 1
 pred_loss_weight = 0
 
 gpu_number = '0'
-experiment_version = 5
+experiment_version = 6
 
 dir_results = 'results/'
 experiment_folder_name = f'CL_between_subjects_{experiment_version}'
@@ -66,15 +66,13 @@ else:
 
 # adapt from multiple source subjects to one target subject
 dataset_splitted_by_subject = windows_dataset.split('subject')
+# Exclude target subject
 src_subject_count = len(dataset_splitted_by_subject) - 1
 assert not batch_size % src_subject_count, "Get same number of samples from each person"
 subject_batch_size = batch_size // src_subject_count
 
-dict_embeddings = {}
 dict_embeddings = load_from_pickle(embeddings_path)
-dict_training = {}
 dict_training = load_from_pickle(training_record_path)
-dict_results = {}
 dict_results = load_from_pickle(results_path)
 
 for i, target_subject in enumerate(subject_ids_lst):
@@ -267,7 +265,8 @@ for i, target_subject in enumerate(subject_ids_lst):
         # A classifier that takes actual embedding + support embedding
         classifier = torch.nn.Sequential(
             # This shoudn't be manual
-            torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
+            # torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
+            torch.nn.Conv2d(40, 4, kernel_size=(144, 1)),
             torch.nn.LogSoftmax(dim=1)
         )
     )

@@ -5,7 +5,7 @@ An encoder that produces embeddings for classification
 A classifier that takes embeddings + support embeddings
 '''
 import torch
-
+import torch.nn.functional as F
 
 class Supportnet(torch.nn.Module):
     def __init__(self, support_encoder, encoder, classifier) -> None:
@@ -23,12 +23,49 @@ class Supportnet(torch.nn.Module):
         # the concated embedding should have shape [80, 144, 1]
         return torch.cat((emb, support_emb_broadcasted), dim=1)
     
+
+    def attention_transform(self, support_emb, task_emb):
+        """
+        Apply attention to the task embedding based on the support embedding.
+        support_emb has shape [batch_size, 40, 144, 1], but we take the last time step (shape [batch_size, 40])
+        task_emb has shape [batch_size, 40, 144, 1]
+        """
+        # Remove the last singleton dimension from task_emb (size: [batch_size, 40, 144])
+        task_emb = task_emb.squeeze(-1)
+
+        # Take the last time step from the support embedding (shape: [batch_size, 40])
+        support_emb_last_step = support_emb[:, :, -1].squeeze(-1)  # Shape: [batch_size, 40]
+
+        # Compute queries, keys, and values using trainable layers
+        query = self.query_layer(task_emb.transpose(1, 2))  # Shape: [batch_size, 144, 40]
+        key = self.key_layer(support_emb_last_step)          # Shape: [batch_size, 40]
+        value = self.value_layer(task_emb.transpose(1, 2))   # Shape: [batch_size, 144, 40]
+
+        # Compute attention scores (scaled dot product) between query and key
+        attention_scores = torch.bmm(query, key.unsqueeze(-1)).squeeze(-1)  # Shape: [batch_size, 144]
+        attention_weights = F.softmax(attention_scores, dim=-1)             # Shape: [batch_size, 144]
+
+        # Apply attention weights to the value (task embedding)
+        attended_value = value * attention_weights.unsqueeze(-1)  # Shape: [batch_size, 144, 40]
+
+        # Transpose back to [batch_size, 40, 144] and add singleton dimension for consistency
+        transformed_task_emb = attended_value.transpose(1, 2).unsqueeze(-1)  # Shape: [batch_size, 40, 144, 1]
+
+        # Add the transformed embedding back to the original task embedding (residual connection)
+        updated_task_emb = transformed_task_emb + task_emb.unsqueeze(-1)  # Shape: [batch_size, 40, 144, 1]
+
+        return updated_task_emb
+
+
     def forward(self, x):
         _ = self.support_encoder(x)
         support_embedding = self.support_encoder.get_embeddings()
         _ = self.encoder(x)
         embedding = self.encoder.get_embeddings()
 
-        concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
-        return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
+        # concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
+        # return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
+
+        intergated_embedding = self.attention_transform(support_embedding, embedding)
+        return self.classifier(intergated_embedding).squeeze(-1).squeeze(-1)
 
