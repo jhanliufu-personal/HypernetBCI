@@ -5,6 +5,7 @@ An encoder that produces embeddings for classification
 A classifier that takes embeddings + support embeddings
 '''
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 class Supportnet(torch.nn.Module):
@@ -14,6 +15,11 @@ class Supportnet(torch.nn.Module):
         self.encoder = encoder
         self.classifier = classifier
         # self.batch_size = batch_size
+
+        # Linear transformation for attention mechanism
+        self.query_layer = nn.Linear(40, 40)  # Query from task embedding (per time step)
+        self.key_layer = nn.Linear(40, 40)    # Key from support embedding
+        self.value_layer = nn.Linear(40, 40)  # Value from task embedding (per time step)
 
     def concatenate_embeddings(self, support_emb, emb):
         # support_emb assumed to have shape [40, 144, 1]; reshaped to [40]
