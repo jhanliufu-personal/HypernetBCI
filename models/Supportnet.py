@@ -69,7 +69,7 @@ class Supportnet(torch.nn.Module):
         # Shape: [batch_size, 40, 144, 1]
         updated_task_emb = transformed_task_emb + task_emb.unsqueeze(-1)  
 
-        print(f'updated_task_emb shape = {updated_task_emb.shape}')
+        # print(f'updated_task_emb shape = {updated_task_emb.shape}')
         return updated_task_emb
 
 
@@ -77,15 +77,15 @@ class Supportnet(torch.nn.Module):
         # print(x)
         _ = self.support_encoder(x)
         support_embedding = self.support_encoder.get_embeddings()
-        print(f'support_embedding.shape = {support_embedding.shape}')
+        # print(f'support_embedding.shape = {support_embedding.shape}')
         _ = self.encoder(x)
         embedding = self.encoder.get_embeddings()
-        print(f'embedding.shape = {embedding.shape}')
+        # print(f'embedding.shape = {embedding.shape}')
 
-        # concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
+        self.integrated_embeddings = self.concatenate_embeddings(support_embedding, embedding)
         # return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
 
         self.integrated_embeddings = self.attention_transform(support_embedding, embedding)
-        print(f'self.integrated_embeddings.shape = {self.integrated_embeddings.shape}')
+        # print(f'self.integrated_embeddings.shape = {self.integrated_embeddings.shape}')
         return self.classifier(self.integrated_embeddings).squeeze(-1).squeeze(-1)
 

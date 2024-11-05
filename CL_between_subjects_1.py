@@ -15,12 +15,12 @@ from models.Supportnet import Supportnet
 from utils import freeze_all_param_but, train_one_epoch, test_model, load_from_pickle
 from loss import contrastive_loss_btw_subject
 
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
-n_classes = 4
+n_classes = 5
 batch_size = 72
 lr = 6.5e-4
 weight_decay = 0
@@ -224,8 +224,8 @@ for i, target_subject in enumerate(subject_ids_lst):
         # A classifier that takes actual embedding + support embedding
         classifier = torch.nn.Sequential(
             # This shoudn't be manual
-            # torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
-            torch.nn.Conv2d(40, 4, kernel_size=(144, 1)),
+            torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
+            # torch.nn.Conv2d(40, 4, kernel_size=(144, 1)),
             torch.nn.LogSoftmax(dim=1)
         )
     )
@@ -352,7 +352,7 @@ for i, target_subject in enumerate(subject_ids_lst):
                 src_x = src_x.to(device)
                 _ = supportnet(src_x)
                 integrated_embeddings = supportnet.integrated_embeddings
-                print(integrated_embeddings.shape)
+                # print(integrated_embeddings.shape)
 
                 for embedding, label in zip(
                     # batch_embeddings.detach().cpu().numpy(), 
