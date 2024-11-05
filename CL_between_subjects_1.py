@@ -36,7 +36,7 @@ dir_results = 'results/'
 experiment_folder_name = f'CL_between_subjects_{experiment_version}'
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 training_record_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'training.pkl')
-# embeddings_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'embeddings.pkl')
+embeddings_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'embeddings.pkl')
 results_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'results.pkl')
 
 # Load dataset
@@ -71,7 +71,7 @@ src_subject_count = len(dataset_splitted_by_subject) - 1
 assert not batch_size % src_subject_count, "Get same number of samples from each person"
 subject_batch_size = batch_size // src_subject_count
 
-# dict_embeddings = load_from_pickle(embeddings_path)
+dict_embeddings = load_from_pickle(embeddings_path)
 dict_training = load_from_pickle(training_record_path)
 dict_results = load_from_pickle(results_path)
 
@@ -82,9 +82,9 @@ for i, target_subject in enumerate(subject_ids_lst):
     #     print(f'Experiment {dict_key} already done')
     #     continue
 
-    if all(d.get(dict_key) is not None for d in [dict_results, dict_training]):
-        print(f'Experiment {dict_key} already done')
-        continue
+    # if all(d.get(dict_key) is not None for d in [dict_results, dict_training]):
+    #     print(f'Experiment {dict_key} already done')
+    #     continue
 
     support_encoder_path = os.path.join(dir_results, f'{experiment_folder_name}/', f'{dict_key}_support_encoder.pth')
     supportnet_path = os.path.join(dir_results, f'{experiment_folder_name}/', f'{dict_key}_supportnet.pth')
@@ -214,51 +214,6 @@ for i, target_subject in enumerate(subject_ids_lst):
         print('Save trained support encoder')
         torch.save(deepcopy(support_encoder.model.state_dict()), support_encoder_path)
 
-    # if dict_embeddings.get(dict_key) is not None:
-    #     print(f'Embeddings by this support encoder have been reduced and saved')
-    #     support_encoder.model.load_state_dict(torch.load(support_encoder_path))
-    # else:
-    #     # Calculate and visualize embeddings
-    #     print('Calculate and reduce embeddings to 2D')
-    #     embedding_lst = []
-    #     subject_id_lst = []
-    #     label_lst = []
-    #     for subject_id, subject_dataset in windows_dataset.split('subject').items():
-
-    #         subject_dataloader = DataLoader(subject_dataset, batch_size=batch_size)
-    #         for _, (src_x, src_y, _) in enumerate(subject_dataloader):
-    #             support_encoder.eval()
-    #             src_x = src_x.to(device)
-    #             _ = support_encoder(src_x)
-    #             batch_embeddings = support_encoder.get_embeddings()
-    #             for embedding, label in zip(
-    #                 batch_embeddings.detach().cpu().numpy(), 
-    #                 src_y.cpu().numpy()
-    #             ):
-    #                 embedding_lst.append(embedding.flatten())
-    #                 label_lst.append(label)
-    #                 subject_id_lst.append(subject_id)
-
-    #     df_embeddings = pd.DataFrame({
-    #         'embedding': embedding_lst, 
-    #         'subject_id': subject_id_lst, 
-    #         'label': label_lst
-    #     })
-
-    #     # Dimensionality reduction
-    #     tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
-    #     reduced_embeddings = tsne_model.fit_transform(
-    #         np.vstack(df_embeddings['embedding'].values)
-    #     )
-    #     df_embeddings['reduced_embedding'] = reduced_embeddings.tolist()
-
-    #     print('Save embeddings')
-    #     dict_embeddings.update({
-    #         dict_key: df_embeddings
-    #     })
-    #     with open(embeddings_path, 'wb') as f:
-    #         pkl.dump(dict_embeddings, f)
-
     # Freeze support encoder
     freeze_all_param_but(support_encoder.model, [])
     # Prepare support net model
@@ -336,35 +291,94 @@ for i, target_subject in enumerate(subject_ids_lst):
         # Save supportnet parameters
         torch.save(deepcopy(supportnet.state_dict()), supportnet_path)
 
-    # Save accuracy and loss
-    dict_training.update({
-        dict_key: {
-            # 'contrastive_loss': embedding_loss_lst,
-            'train_accuracy': train_acc_lst,
-            'valid_accuracy': valid_acc_lst
-        }
-    })
-    with open(training_record_path, 'wb') as f:
-        pkl.dump(dict_training, f)
+        # Save accuracy and loss
+        dict_training.update({
+            dict_key: {
+                # 'contrastive_loss': embedding_loss_lst,
+                'train_accuracy': train_acc_lst,
+                'valid_accuracy': valid_acc_lst
+            }
+        })
+        with open(training_record_path, 'wb') as f:
+            pkl.dump(dict_training, f)
 
     ########################################################
     ###################### TESTING #########################
     ########################################################
 
-    target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
-    target_loader = DataLoader(target_dataset, batch_size=batch_size)
-    target_loss, target_acc = test_model(
-        target_loader, 
-        supportnet, 
-        pred_loss_fn
-    )
+    if dict_results.get(dict_key) is not None:
+        target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
+        target_loader = DataLoader(target_dataset, batch_size=batch_size)
+        target_loss, target_acc = test_model(
+            target_loader, 
+            supportnet, 
+            pred_loss_fn
+        )
 
-    dict_results.update({
-        dict_key: target_acc
-    })
-    with open(results_path, 'wb') as f:
-        pkl.dump(dict_results, f)
+        dict_results.update({
+            dict_key: target_acc
+        })
+        with open(results_path, 'wb') as f:
+            pkl.dump(dict_results, f)
 
-    print(f'Test accuracy on target subject: {target_acc*100:.2f}')
+        print(f'Test accuracy on target subject: {target_acc*100:.2f}')
+    else:
+        print(
+            f'Supportnet has been tested with' 
+            f'held-out data from subject {target_subject}'
+        )
+
+    ########################################################
+    ###################### EMBEDDINGS ######################
+    ########################################################
+    if dict_embeddings.get(dict_key) is not None:
+        print(f'Embeddings by this supportnet have been reduced and saved')
+        # support_encoder.model.load_state_dict(torch.load(support_encoder_path))
+    else:
+        # Calculate and visualize embeddings
+        print('Calculate and reduce embeddings to 2D')
+        embedding_lst = []
+        subject_id_lst = []
+        label_lst = []
+        for subject_id, subject_dataset in windows_dataset.split('subject').items():
+
+            subject_dataloader = DataLoader(subject_dataset, batch_size=batch_size)
+            for _, (src_x, src_y, _) in enumerate(subject_dataloader):
+                # support_encoder.eval()
+                # src_x = src_x.to(device)
+                # _ = support_encoder(src_x)
+                # batch_embeddings = support_encoder.get_embeddings()
+                supportnet.eval()
+                src_x = src_x.to(device)
+                integrated_embedding = supportnet.integrated_embeddings
+
+                for embedding, label in zip(
+                    # batch_embeddings.detach().cpu().numpy(), 
+                    integrated_embedding,
+                    src_y.cpu().numpy()
+                ):
+                    embedding_lst.append(embedding.flatten())
+                    label_lst.append(label)
+                    subject_id_lst.append(subject_id)
+
+        df_embeddings = pd.DataFrame({
+            'embedding': embedding_lst, 
+            'subject_id': subject_id_lst, 
+            'label': label_lst
+        })
+
+        # Dimensionality reduction
+        tsne_model = TSNE(n_components=2, random_state=0, perplexity=10)
+        reduced_embeddings = tsne_model.fit_transform(
+            np.vstack(df_embeddings['embedding'].values)
+        )
+        df_embeddings['reduced_embedding'] = reduced_embeddings.tolist()
+
+        print('Save embeddings')
+        dict_embeddings.update({
+            dict_key: df_embeddings
+        })
+        with open(embeddings_path, 'wb') as f:
+            pkl.dump(dict_embeddings, f)
 
 

@@ -21,6 +21,8 @@ class Supportnet(torch.nn.Module):
         self.key_layer = nn.Linear(40, 40)    # Key from support embedding
         self.value_layer = nn.Linear(40, 40)  # Value from task embedding (per time step)
 
+        self.integrated_embeddings = None
+
     def concatenate_embeddings(self, support_emb, emb):
         # support_emb assumed to have shape [40, 144, 1]; reshaped to [40]
         support_emb = support_emb.squeeze(-1)[:,:,-1]
@@ -43,22 +45,29 @@ class Supportnet(torch.nn.Module):
         support_emb_last_step = support_emb[:, :, -1].squeeze(-1)  # Shape: [batch_size, 40]
 
         # Compute queries, keys, and values using trainable layers
-        query = self.query_layer(task_emb.transpose(1, 2))  # Shape: [batch_size, 144, 40]
-        key = self.key_layer(support_emb_last_step)          # Shape: [batch_size, 40]
-        value = self.value_layer(task_emb.transpose(1, 2))   # Shape: [batch_size, 144, 40]
+        # Shape: [batch_size, 144, 40]
+        query = self.query_layer(task_emb.transpose(1, 2))  
+        # Shape: [batch_size, 40]
+        key = self.key_layer(support_emb_last_step)     
+        # Shape: [batch_size, 144, 40]     
+        value = self.value_layer(task_emb.transpose(1, 2))   
 
         # Compute attention scores (scaled dot product) between query and key
-        attention_scores = torch.bmm(query, key.unsqueeze(-1)).squeeze(-1)  # Shape: [batch_size, 144]
-        attention_weights = F.softmax(attention_scores, dim=-1)             # Shape: [batch_size, 144]
-
+        # Shape: [batch_size, 144]
+        attention_scores = torch.bmm(query, key.unsqueeze(-1)).squeeze(-1)
+        # Shape: [batch_size, 144]
+        attention_weights = F.softmax(attention_scores, dim=-1)             
         # Apply attention weights to the value (task embedding)
-        attended_value = value * attention_weights.unsqueeze(-1)  # Shape: [batch_size, 144, 40]
+        # Shape: [batch_size, 144, 40]
+        attended_value = value * attention_weights.unsqueeze(-1)  
 
         # Transpose back to [batch_size, 40, 144] and add singleton dimension for consistency
-        transformed_task_emb = attended_value.transpose(1, 2).unsqueeze(-1)  # Shape: [batch_size, 40, 144, 1]
+        # Shape: [batch_size, 40, 144, 1]
+        transformed_task_emb = attended_value.transpose(1, 2).unsqueeze(-1)  
 
         # Add the transformed embedding back to the original task embedding (residual connection)
-        updated_task_emb = transformed_task_emb + task_emb.unsqueeze(-1)  # Shape: [batch_size, 40, 144, 1]
+        # Shape: [batch_size, 40, 144, 1]
+        updated_task_emb = transformed_task_emb + task_emb.unsqueeze(-1)  
 
         return updated_task_emb
 
@@ -72,6 +81,6 @@ class Supportnet(torch.nn.Module):
         # concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
         # return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
 
-        intergated_embedding = self.attention_transform(support_embedding, embedding)
-        return self.classifier(intergated_embedding).squeeze(-1).squeeze(-1)
+        self.intergated_embedding = self.attention_transform(support_embedding, embedding)
+        return self.classifier(self.intergated_embedding).squeeze(-1).squeeze(-1)
 
