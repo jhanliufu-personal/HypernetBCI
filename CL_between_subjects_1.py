@@ -30,7 +30,7 @@ emb_loss_weight = 1
 pred_loss_weight = 0
 
 gpu_number = '0'
-experiment_version = 6
+experiment_version = 5
 
 dir_results = 'results/'
 experiment_folder_name = f'CL_between_subjects_{experiment_version}'
