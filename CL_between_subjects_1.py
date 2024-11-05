@@ -15,8 +15,8 @@ from models.Supportnet import Supportnet
 from utils import freeze_all_param_but, train_one_epoch, test_model, load_from_pickle
 from loss import contrastive_loss_btw_subject
 
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2]
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
