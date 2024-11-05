@@ -34,6 +34,7 @@ experiment_version = 5
 
 dir_results = 'results/'
 experiment_folder_name = f'CL_between_subjects_{experiment_version}'
+print(experiment_folder_name)
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 training_record_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'training.pkl')
 embeddings_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'embeddings.pkl')
