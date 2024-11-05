@@ -74,6 +74,7 @@ class Supportnet(torch.nn.Module):
 
 
     def forward(self, x):
+        print(x)
         _ = self.support_encoder(x)
         support_embedding = self.support_encoder.get_embeddings()
         _ = self.encoder(x)
