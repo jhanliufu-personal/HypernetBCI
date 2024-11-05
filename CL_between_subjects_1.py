@@ -352,7 +352,7 @@ for i, target_subject in enumerate(subject_ids_lst):
                 src_x = src_x.to(device)
                 _ = supportnet(src_x)
                 integrated_embeddings = supportnet.integrated_embeddings
-                print(integrated_embeddings)
+                print(integrated_embeddings.shape)
 
                 for embedding, label in zip(
                     # batch_embeddings.detach().cpu().numpy(), 
