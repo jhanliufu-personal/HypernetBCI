@@ -74,16 +74,18 @@ class Supportnet(torch.nn.Module):
 
 
     def forward(self, x):
-        print(x)
+        # print(x)
         _ = self.support_encoder(x)
         support_embedding = self.support_encoder.get_embeddings()
+        print(support_embedding.shape)
         _ = self.encoder(x)
         embedding = self.encoder.get_embeddings()
+        print(embedding.shape)
 
         # concatenated_embedding = self.concatenate_embeddings(support_embedding, embedding)
         # return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
 
         self.intergated_embeddings = self.attention_transform(support_embedding, embedding)
-        print(self.integrated_embeddings)
+        print(self.integrated_embeddings.shape)
         return self.classifier(self.intergated_embeddings).squeeze(-1).squeeze(-1)
 
