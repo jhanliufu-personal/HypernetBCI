@@ -356,7 +356,7 @@ for i, target_subject in enumerate(subject_ids_lst):
 
                 for embedding, label in zip(
                     # batch_embeddings.detach().cpu().numpy(), 
-                    integrated_embeddings,
+                    integrated_embeddings.detach().cpu().numpy(),
                     src_y.cpu().numpy()
                 ):
                     embedding_lst.append(embedding.flatten())
