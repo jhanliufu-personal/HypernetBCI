@@ -82,5 +82,6 @@ class Supportnet(torch.nn.Module):
         # return self.classifier(concatenated_embedding).squeeze(-1).squeeze(-1)
 
         self.intergated_embeddings = self.attention_transform(support_embedding, embedding)
-        return self.classifier(self.intergated_embedding).squeeze(-1).squeeze(-1)
+        print(self.integrated_embeddings)
+        return self.classifier(self.intergated_embeddings).squeeze(-1).squeeze(-1)
 

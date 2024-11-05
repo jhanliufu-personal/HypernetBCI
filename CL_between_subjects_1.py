@@ -350,12 +350,12 @@ for i, target_subject in enumerate(subject_ids_lst):
                 # batch_embeddings = support_encoder.get_embeddings()
                 supportnet.eval()
                 src_x = src_x.to(device)
-                integrated_embedding = supportnet.integrated_embeddings
-                # print(integrated_embedding)
+                integrated_embeddings = supportnet.integrated_embeddings
+                print(integrated_embeddings)
 
                 for embedding, label in zip(
                     # batch_embeddings.detach().cpu().numpy(), 
-                    integrated_embedding,
+                    integrated_embeddings,
                     src_y.cpu().numpy()
                 ):
                     embedding_lst.append(embedding.flatten())
