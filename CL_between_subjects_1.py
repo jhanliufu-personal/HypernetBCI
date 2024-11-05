@@ -234,7 +234,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     
     if os.path.exists(supportnet_path) and os.path.getsize(supportnet_path) > 0:
         print(f'A supportnet trained without subject {target_subject} exists')
-        Supportnet.load_state_dict(torch.load(supportnet_path))
+        supportnet.load_state_dict(torch.load(supportnet_path))
     else:
         #############################################################
         ################### Classifier training #####################
@@ -306,7 +306,7 @@ for i, target_subject in enumerate(subject_ids_lst):
     ###################### TESTING #########################
     ########################################################
 
-    if dict_results.get(dict_key) is not None:
+    if dict_results.get(dict_key) is None:
         target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
         target_loader = DataLoader(target_dataset, batch_size=batch_size)
         target_loss, target_acc = test_model(
