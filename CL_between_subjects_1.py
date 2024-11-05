@@ -15,8 +15,8 @@ from models.Supportnet import Supportnet
 from utils import freeze_all_param_but, train_one_epoch, test_model, load_from_pickle
 from loss import contrastive_loss_btw_subject
 
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2, 3]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
@@ -324,7 +324,7 @@ for i, target_subject in enumerate(subject_ids_lst):
         print(f'Test accuracy on target subject: {target_acc*100:.2f}')
     else:
         print(
-            f'Supportnet has been tested with' 
+            f'Supportnet has been tested with ' 
             f'held-out data from subject {target_subject}'
         )
 
@@ -351,6 +351,7 @@ for i, target_subject in enumerate(subject_ids_lst):
                 supportnet.eval()
                 src_x = src_x.to(device)
                 integrated_embedding = supportnet.integrated_embeddings
+                print(integrated_embedding)
 
                 for embedding, label in zip(
                     # batch_embeddings.detach().cpu().numpy(), 
