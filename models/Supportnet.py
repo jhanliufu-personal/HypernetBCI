@@ -87,5 +87,5 @@ class Supportnet(torch.nn.Module):
 
         self.integrated_embeddings = self.attention_transform(support_embedding, embedding)
         print(f'self.integrated_embeddings.shape = {self.integrated_embeddings.shape}')
-        return self.classifier(self.intergated_embeddings).squeeze(-1).squeeze(-1)
+        return self.classifier(self.integrated_embeddings).squeeze(-1).squeeze(-1)
 
