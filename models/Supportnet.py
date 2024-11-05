@@ -69,6 +69,7 @@ class Supportnet(torch.nn.Module):
         # Shape: [batch_size, 40, 144, 1]
         updated_task_emb = transformed_task_emb + task_emb.unsqueeze(-1)  
 
+        print(updated_task_emb)
         return updated_task_emb
 
 
