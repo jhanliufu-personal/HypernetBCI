@@ -32,7 +32,7 @@ subject_ids_lst = [1, 2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
-n_classes = 5
+n_classes = 4
 batch_size = 72
 lr = 6.5e-4
 weight_decay = 0
