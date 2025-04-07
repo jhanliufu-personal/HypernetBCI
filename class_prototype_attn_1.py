@@ -39,7 +39,7 @@ weight_decay = 0
 n_epochs = 30
 temperature = 0.5
 
-gpu_number = '0'
+gpu_number = '1'
 experiment_version = 1
 
 dir_results = 'results/'
