@@ -98,7 +98,7 @@ class Supportnet(torch.nn.Module):
             if class_mask.sum() > 0:
                 proto = support_emb[class_mask].mean(dim=0)  # [40, 144, 1]
                 print(f'The shape of proto is {proto.shape}')
-                class_prototypes[c] = proto.squeeze(-1)      # [40, 144]
+                class_prototypes[c] = proto#.squeeze(-1)      # [40, 144]
 
         # Step 2: Transpose task_emb to [B, T, D]
         task_emb = task_emb.squeeze(-1).permute(0, 2, 1)  # [B, T, D]
