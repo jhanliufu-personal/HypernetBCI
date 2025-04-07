@@ -509,6 +509,9 @@ def train_one_epoch_episodic(
         # [batch_size_query, num_classes]
         logits = model.classifier(task_emb_adapted)  
 
+        print(f'The shape of logits is {logits.shape}')
+        print(f'The shape of query_y is {query_y.shape}')
+
         # ===== Loss and optimization =====
         loss = loss_fn(logits, query_y)
         loss.backward()
