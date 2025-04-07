@@ -91,15 +91,15 @@ for i, target_subject in enumerate(subject_ids_lst):
 
     dict_key = f'adapt_to_{target_subject}'
 
-    support_net_folder = 'class_prototype_attention_1'
+    support_encoder_folder = 'class_prototype_attention_1'
     support_encoder_path = os.path.join(
         dir_results, 
-        support_net_folder,
+        support_encoder_folder,
         f'{dict_key}_support_encoder.pth'
     )
     supportnet_path = os.path.join(
         dir_results, 
-        support_net_folder,
+        experiment_folder_name,
         f'{dict_key}_supportnet.pth'
     )
     print(f'Adapt model from multiple sources to target subject {target_subject}')
