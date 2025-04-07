@@ -264,8 +264,8 @@ for i, target_subject in enumerate(subject_ids_lst):
         ShallowFBCSPEncoder(torch.Size([n_chans, input_window_samples]), 'drop', n_classes),
         # Classification head
         classifier = torch.nn.Sequential(
-            torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
-            # torch.nn.Conv2d(40, 4, kernel_size=(144, 1)),
+            # torch.nn.Conv2d(80, 4, kernel_size=(144, 1)),
+            torch.nn.Conv2d(40, 4, kernel_size=(144, 1)),
             torch.nn.LogSoftmax(dim=1)
         )
     )

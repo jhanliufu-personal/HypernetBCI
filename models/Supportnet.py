@@ -107,7 +107,7 @@ class Supportnet(torch.nn.Module):
         output = []
         for t in range(T):
             x_t = task_emb[:, t]  # [B, D]
-            print(f'The shape of x_t is {x_t.shape}')
+            # print(f'The shape of x_t is {x_t.shape}')
 
             q = self.query_layer(x_t)                   # [B, dim]
             k = self.key_layer(class_prototypes[:, :, t])   # [num_classes, dim]
