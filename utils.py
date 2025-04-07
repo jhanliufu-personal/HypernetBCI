@@ -491,6 +491,8 @@ def train_one_epoch_episodic(
         print(query_x.shape)
 
         task_emb = model.encoder.get_embeddings()
+        # remove the singleton dimension
+        task_emb = task_emb.squeeze(-1)
 
         print(task_emb.shape)
 
