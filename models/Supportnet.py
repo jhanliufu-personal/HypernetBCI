@@ -89,6 +89,8 @@ class Supportnet(torch.nn.Module):
         device = task_emb.device
         T, D = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
 
+        print(task_emb.shape)
+
         # === Step 1: Compute class prototypes by averaging over support examples
         class_prototypes = torch.zeros((num_classes, T, D), device=device)
         for c in range(num_classes):
@@ -108,7 +110,9 @@ class Supportnet(torch.nn.Module):
         output = []
         # Projection per time step — per time step
         for t in range(T):
-            q = self.query_layer(task_emb[:, t]) # [batch_size, dim]         
+            x = task_emb[:, t]
+            print(x.shape)
+            q = self.query_layer(x) # [batch_size, dim]         
             k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]         
             v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
 
