@@ -503,6 +503,8 @@ def train_one_epoch_episodic(
             support_emb, support_y, task_emb, num_classes=num_classes
         )
 
+        print(task_emb_adapted.shape)
+
         # ===== Final classification head =====
         # [batch_size_query, num_classes]
         logits = model.classifier(task_emb_adapted)  
