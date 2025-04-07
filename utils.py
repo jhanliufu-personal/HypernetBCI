@@ -507,10 +507,10 @@ def train_one_epoch_episodic(
 
         # ===== Final classification head =====
         # [batch_size_query, num_classes]
-        logits = model.classifier(task_emb_adapted)  
+        logits = model.classifier(task_emb_adapted).squeeze(-1).squeeze(-1)
 
-        print(f'The shape of logits is {logits.shape}')
-        print(f'The shape of query_y is {query_y.shape}')
+        # print(f'The shape of logits is {logits.shape}')
+        # print(f'The shape of query_y is {query_y.shape}')
 
         # ===== Loss and optimization =====
         loss = loss_fn(logits, query_y)
