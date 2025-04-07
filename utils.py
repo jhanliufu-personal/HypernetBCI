@@ -487,7 +487,12 @@ def train_one_epoch_episodic(
         _ = model.support_encoder(support_x)
         support_emb = model.support_encoder.get_embeddings()
         _ = model.encoder(query_x)
+
+        print(query_x.shape)
+
         task_emb = model.encoder.get_embeddings()
+
+        print(task_emb.shape)
 
         task_emb_adapted = model.attention_transform_with_prototypes(
             support_emb, support_y, task_emb, num_classes=num_classes
