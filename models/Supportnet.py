@@ -91,55 +91,36 @@ class Supportnet(torch.nn.Module):
 
         print(task_emb.shape)
 
-        # === Step 1: Compute class prototypes by averaging over support examples
-        class_prototypes = torch.zeros((num_classes, T, D), device=device)
+        # Step 1: Compute class prototypes
+        class_prototypes = torch.zeros((num_classes, D, T), device=device)
         for c in range(num_classes):
             class_mask = (support_y == c)
-            # If there is any sample for this label class
             if class_mask.sum() > 0:
-                # [144, 40]
-                class_prototypes[c] = support_emb[class_mask].mean(dim=0)
+                proto = support_emb[class_mask].mean(dim=0)  # [40, 144, 1]
+                class_prototypes[c] = proto.squeeze(-1)      # [40, 144]
 
-        # === Step 2: Project task embedding (query), prototype (key/value)
-
-        # # Reshape: [batch_size * T, D]
-        # task_q = task_emb.reshape(-1, D)
-        # # [144, num_classes, 40]
-        # proto_kv = class_prototypes.permute(1, 0, 2)  
+        # Step 2: Transpose task_emb to [B, T, D]
+        task_emb = task_emb.squeeze(-1).permute(0, 2, 1)  # [B, T, D]
 
         output = []
-        # Projection per time step — per time step
-        task_emb = task_emb.transpose(1, 2)  # From [B, C, T] to [B, T, C]
-        class_prototypes = class_prototypes.transpose(1, 2)
         for t in range(T):
+            x_t = task_emb[:, t]  # [B, D]
 
-            x = task_emb[:, t]
-            # print(f'Shape of x is {x.shape}')
+            q = self.query_layer(x_t)                   # [B, dim]
+            k = self.key_layer(class_prototypes[:, :, t])   # [num_classes, dim]
+            v = self.value_layer(class_prototypes[:, :, t]) # [num_classes, dim]
 
-            q = self.query_layer(x) # [batch_size, dim]   
-            # print(f'Shape of q is {q.shape}')
+            attn_scores = torch.matmul(q, k.T)          # [B, num_classes]
+            attn_weights = F.softmax(attn_scores, dim=-1)  # [B, num_classes]
+            attended = torch.matmul(attn_weights, v)    # [B, dim]
 
-            # print(f'Shape of c is {class_prototypes[:, t].shape}')
-            k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]     
-            # print(f'Shape of k is {k.shape}')
+            updated = attended + x_t  # residual
+            output.append(updated.unsqueeze(1))  # [B, 1, dim]
 
-            v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
-
-            # [batch_size, num_classes]
-            attn_scores = torch.matmul(q, k.T)
-            attn_weights = F.softmax(attn_scores, dim=-1)
-
-            # [batch_size, dim]
-            attended = torch.matmul(attn_weights, v)
-
-            # Optionally add residual
-            updated = attended + task_emb[:, t] # [batch_size, dim]           
-            output.append(updated.unsqueeze(1)) # Keep time dim                 
-
-        rtn = torch.cat(output, dim=1)
-        print(f'Shape of rtn is {rtn.shape}')
-
-        return rtn
+        # Step 3: [B, T, D] → [B, D, T, 1]
+        updated = torch.cat(output, dim=1)        # [B, T, D]
+        updated = updated.permute(0, 2, 1).unsqueeze(-1)  # [B, D, T, 1]
+        return updated
 
 
     def forward(self, x):
