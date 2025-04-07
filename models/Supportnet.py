@@ -120,7 +120,7 @@ class Supportnet(torch.nn.Module):
             # print(f'Shape of q is {q.shape}')
 
             # print(f'Shape of c is {class_prototypes[:, t].shape}')
-            k = self.key_layer() # [num_classes, dim]     
+            k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]     
             # print(f'Shape of k is {k.shape}')
 
             v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
