@@ -617,9 +617,12 @@ def train_one_epoch_meta_subject(
     model.train()
     total_loss, correct, total_query = 0.0, 0.0, 0
 
-    batch_size = subject_loaders[0].batch_size
-    n_support = batch_size // (2 * num_classes)
-    n_query = batch_size // (2 * num_classes)
+    # batch_size = subject_loaders[0].batch_size
+    # n_support = batch_size // (2 * num_classes)
+    # n_query = batch_size // (2 * num_classes)
+
+    n_support = 5
+    n_query = 10
 
     progress_bar = tqdm(range(len(subject_loaders)), disable=not print_batch_stats)
     for batch_idx in progress_bar:
