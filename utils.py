@@ -586,7 +586,7 @@ def test_model_episodic(
                 support_emb, support_y, task_emb, num_classes=num_classes
             )
 
-            logits = model.classifier_head(task_emb_adapted).squeeze(-1).squeeze(-1)
+            logits = model.classifier(task_emb_adapted).squeeze(-1).squeeze(-1)
 
             loss = loss_fn(logits, query_y).item()
             preds = logits.argmax(dim=1)
