@@ -641,6 +641,9 @@ def train_one_epoch_meta_subject(
                 print(f"Skipping batch {batch_idx} (not enough class examples)")
             continue
 
+        print(f'Shape of support_x is {support_x.shape}')
+        print(f'Shape of query_x is {query_x.shape}')
+
         # ===== Encode support and query sets =====
         _ = model.support_encoder(support_x)
         support_emb = model.support_encoder.get_embeddings()
