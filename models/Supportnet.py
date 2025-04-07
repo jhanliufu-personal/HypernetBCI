@@ -109,9 +109,11 @@ class Supportnet(torch.nn.Module):
 
         output = []
         # Projection per time step — per time step
+        task_emb = task_emb.transpose(1, 2)  # From [B, C, T] to [B, T, C]
         for t in range(T):
             x = task_emb[:, t]
             print(x.shape)
+
             q = self.query_layer(x) # [batch_size, dim]         
             k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]         
             v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
