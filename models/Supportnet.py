@@ -96,7 +96,7 @@ class Supportnet(torch.nn.Module):
             # If there is any sample for this label class
             if class_mask.sum() > 0:
                 # [144, 40]
-                class_prototypes[c] = support_emb[class_mask].mean(dim=0)  
+                class_prototypes[c] = support_emb[class_mask].mean(dim=0).squeeze(-1)
 
         # === Step 2: Project task embedding (query), prototype (key/value)
 

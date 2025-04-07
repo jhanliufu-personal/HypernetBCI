@@ -169,6 +169,8 @@ for i, target_subject in enumerate(subject_ids_lst):
         print(f'A support encoder trained without subject {target_subject} exists')
         support_encoder.model.load_state_dict(torch.load(support_encoder_path))
     else:
+        print(f'Train support encoder without subject {target_subject}')
+
         support_optimizer = torch.optim.AdamW(
             support_encoder.parameters(),
             lr=lr, 
