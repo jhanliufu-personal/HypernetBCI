@@ -9,19 +9,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class Supportnet(torch.nn.Module):
-    def __init__(self, support_encoder, encoder, classifier) -> None:
+    def __init__(self, support_encoder, encoder, classifier, dim=40) -> None:
         super(Supportnet, self).__init__() 
         self.support_encoder = support_encoder
         self.encoder = encoder
         self.classifier = classifier
-        # self.batch_size = batch_size
 
-        # Linear transformation for attention mechanism
-        self.query_layer = nn.Linear(40, 40)  # Query from task embedding (per time step)
-        self.key_layer = nn.Linear(40, 40)    # Key from support embedding
-        self.value_layer = nn.Linear(40, 40)  # Value from task embedding (per time step)
+        # Query from task embedding (per time step)
+        self.query_layer = nn.Linear(40, dim)
+        # Key from support embedding
+        self.key_layer = nn.Linear(40, dim)
+        # Value from task embedding (per time step) 
+        self.value_layer = nn.Linear(40, dim)  
 
         self.integrated_embeddings = None
+
+        self.class_prototypes = None
+
 
     def concatenate_embeddings(self, support_emb, emb):
         # support_emb assumed to have shape [40, 144, 1]; reshaped to [40]
@@ -53,7 +57,7 @@ class Supportnet(torch.nn.Module):
         value = self.value_layer(task_emb.transpose(1, 2))   
 
         # Compute attention scores (scaled dot product) between query and key
-        # Shape: [batch_size, 144]
+        # Shape: [batch_size, ]
         attention_scores = torch.bmm(query, key.unsqueeze(-1)).squeeze(-1)
         # Shape: [batch_size, 144]
         attention_weights = F.softmax(attention_scores, dim=-1)             
@@ -71,6 +75,55 @@ class Supportnet(torch.nn.Module):
 
         # print(f'updated_task_emb shape = {updated_task_emb.shape}')
         return updated_task_emb
+
+
+    def attention_transform_with_prototypes(
+        self, support_emb, support_y, task_emb, num_classes=4
+    ):
+        """
+        Apply attention over class prototypes at each time step independently.
+
+        Returns:
+            updated_task_embedding: [batch_size, 144, 40]
+        """
+        device = task_emb.device
+        T, D = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
+
+        # === Step 1: Compute class prototypes by averaging over support examples
+        class_prototypes = torch.zeros((num_classes, T, D), device=device)
+        for c in range(num_classes):
+            class_mask = (support_y == c)
+            # If there is any sample for this label class
+            if class_mask.sum() > 0:
+                # [144, 40]
+                class_prototypes[c] = support_emb[class_mask].mean(dim=0)  
+
+        # === Step 2: Project task embedding (query), prototype (key/value)
+
+        # # Reshape: [batch_size * T, D]
+        # task_q = task_emb.reshape(-1, D)
+        # # [144, num_classes, 40]
+        # proto_kv = class_prototypes.permute(1, 0, 2)  
+
+        output = []
+        # Projection per time step — per time step
+        for t in range(T):
+            q = self.query_layer(task_emb[:, t]) # [batch_size, dim]         
+            k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]         
+            v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
+
+            # [batch_size, num_classes]
+            attn_scores = torch.matmul(q, k.T)
+            attn_weights = F.softmax(attn_scores, dim=-1)
+
+            # [batch_size, dim]
+            attended = torch.matmul(attn_weights, v)
+
+            # Optionally add residual
+            updated = attended + task_emb[:, t] # [batch_size, dim]           
+            output.append(updated.unsqueeze(1)) # Keep time dim                 
+
+        return torch.cat(output, dim=1)
 
 
     def forward(self, x):

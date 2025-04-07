@@ -8,7 +8,7 @@ import numpy as np
 import argparse
 import json
 import pickle as pkl
-from contextlib import nullcontext
+# from contextlib import nullcontext
 import os
 
 import torch
@@ -254,17 +254,16 @@ def train_one_epoch(
     loss_fn, 
     optimizer,
     scheduler: LRScheduler, 
-    # warmup_scheduler: None,
     epoch: int, 
     device="cuda", 
     print_batch_stats=False,
-    optimize_for_acc=True,
-    regularize_tensor_distance=False,
-    regularization_coef=1,
+    # optimize_for_acc=True,
+    # regularize_tensor_distance=False,
+    # regularization_coef=1,
     **forward_pass_kwargs
 ):
     # Have to include at least one loss term
-    assert optimize_for_acc or regularization_coef, "Must include at least one loss term"
+    # assert optimize_for_acc or regularization_coef, "Must include at least one loss term"
 
     # Set the model to training mode
     model.train()  
@@ -278,21 +277,21 @@ def train_one_epoch(
         optimizer.zero_grad()
         pred = model(X, **forward_pass_kwargs)
         
-        if optimize_for_acc:
-            # print(pred.shape)
-            # print(y.shape)
-            acc_loss = loss_fn(pred, y)
-        else:
-            acc_loss = 0
-        if regularize_tensor_distance:
-            distance = model.calculate_tensor_distance()
-            distance_loss = regularization_coef * distance
-        else:
-            distance_loss = 0
-        loss = acc_loss + distance_loss
+        # if optimize_for_acc:
+        #     # print(pred.shape)
+        #     # print(y.shape)
+        #     acc_loss = loss_fn(pred, y)
+        # else:
+        #     acc_loss = 0
+        # if regularize_tensor_distance:
+        #     distance = model.calculate_tensor_distance()
+        #     distance_loss = regularization_coef * distance
+        # else:
+        #     distance_loss = 0
+        # loss = acc_loss + distance_loss
 
+        loss = loss_fn(pred, y)
         loss.backward()
-        # update the model weights
         optimizer.step()  
         optimizer.zero_grad()
 
@@ -307,7 +306,6 @@ def train_one_epoch(
             )
 
     # Update the learning rate
-    # with warmup_scheduler.dampening() if warmup_scheduler is not None else nullcontext():
     scheduler.step()
 
     correct /= len(dataloader.dataset)
@@ -384,4 +382,205 @@ def test_model(
     )
     return test_loss, correct
 
-    
+
+# from collections import defaultdict
+'''
+Create support/query sets from a batch.
+'''
+def sample_episode(X, y, num_classes, n_support, n_query):
+    """
+    Create support/query sets from a batch.
+
+    Inputs:
+        X: [batch_size, channels, time]
+        y: [batch_size] (LongTensor of class labels)
+        num_classes: number of classes per episode
+        n_support: number of support examples per class
+        n_query: number of query examples per class
+
+    Returns:
+        support_x, support_y, query_x, query_y
+    """
+    device = X.device
+    unique_classes = torch.unique(y)
+    assert len(unique_classes) >= num_classes, "Not enough classes in batch"
+
+    selected_classes = unique_classes[torch.randperm(len(unique_classes))[:num_classes]]
+
+    support_x = []
+    support_y = []
+    query_x = []
+    query_y = []
+
+    for cls in selected_classes:
+        class_mask = (y == cls)
+        cls_indices = class_mask.nonzero(as_tuple=True)[0]
+        cls_indices = cls_indices[torch.randperm(len(cls_indices))]
+
+        assert len(cls_indices) >= n_support + n_query, f"Not enough examples for class {cls.item()}"
+
+        support_indices = cls_indices[:n_support]
+        query_indices = cls_indices[n_support:n_support + n_query]
+
+        support_x.append(X[support_indices])
+        support_y.append(y[support_indices])
+        query_x.append(X[query_indices])
+        query_y.append(y[query_indices])
+
+    support_x = torch.cat(support_x, dim=0).to(device)
+    support_y = torch.cat(support_y, dim=0).to(device)
+    query_x = torch.cat(query_x, dim=0).to(device)
+    query_y = torch.cat(query_y, dim=0).to(device)
+
+    return support_x, support_y, query_x, query_y
+
+
+"""
+Episodic training: construct one support/query episode from each batch.
+Assumes support_encoder, task_encoder, and attention_transform_with_prototypes
+are defined in the model.
+"""
+def train_one_epoch_episodic(
+    dataloader: DataLoader, 
+    model: nn.Module, 
+    loss_fn, 
+    optimizer,
+    scheduler: LRScheduler, 
+    epoch: int, 
+    device="cuda", 
+    num_classes = 4,
+    print_batch_stats=False,
+):
+
+    # Episodic setup
+    batch_size = dataloader.batch_size
+    n_support = batch_size // (2 * num_classes)
+    n_query = batch_size // (2 * num_classes)
+
+    # Set the model to training mode
+    model.train()  
+    train_loss, correct = 0, 0
+
+    progress_bar = tqdm(
+        enumerate(dataloader), 
+        total=len(dataloader),
+        disable=not print_batch_stats
+    )
+
+    for batch_idx, (X, y, _) in progress_bar:
+        X, y = X.to(device), y.to(device)
+        optimizer.zero_grad()
+
+        # ===== Sample support/query set from batch =====
+        try:
+            support_x, support_y, query_x, query_y = sample_episode(
+                X, y, num_classes=num_classes,
+                n_support=n_support, n_query=n_query
+            )
+        except AssertionError as e:
+            # Skip this batch if it doesn't contain enough data per class
+            if print_batch_stats:
+                print(f"Skipping batch {batch_idx} (not enough samples per class)")
+            continue
+        
+        # ===== Encode support and query sets =====
+        _ = model.support_encoder(support_x)
+        support_emb = model.support_encoder.get_embeddings()
+        _ = model.encoder(query_x)
+        task_emb = model.encoder.get_embeddings()
+
+        task_emb_adapted = model.attention_transform_with_prototypes(
+            support_emb, support_y, task_emb, num_classes=num_classes
+        )
+
+        # ===== Final classification head =====
+        # [batch_size_query, num_classes]
+        logits = model.classifier(task_emb_adapted)  
+
+        # ===== Loss and optimization =====
+        loss = loss_fn(logits, query_y)
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss.item()
+        correct += (logits.argmax(1) == query_y).sum().item()
+
+        if print_batch_stats:
+            progress_bar.set_description(
+                f"Epoch {epoch}, "
+                f"Batch {batch_idx + 1}/{len(dataloader)}, "
+                f"Loss: {loss.item():.6f}"
+            )
+
+    # Update the learning rate
+    scheduler.step()
+
+    correct /= len(dataloader.dataset)
+    return train_loss / len(dataloader), correct
+
+
+@torch.no_grad()
+def test_model_episodic(
+    dataloader: DataLoader, 
+    model: nn.Module, 
+    loss_fn, 
+    num_classes=4,
+    print_batch_stats=True, 
+    device="cuda"
+):
+    model.eval()
+    test_loss, correct, total_query = 0.0, 0.0, 0
+
+    # Support/query setup
+    batch_size = dataloader.batch_size
+    n_support = batch_size // (2 * num_classes)
+    n_query = batch_size // (2 * num_classes)
+
+    if print_batch_stats:
+        progress_bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    else:
+        progress_bar = enumerate(dataloader)
+
+    for batch_idx, (X, y, _) in progress_bar:
+        X, y = X.to(device), y.to(device)
+
+        try:
+            support_x, support_y, query_x, query_y = sample_episode(
+                X, y, num_classes=num_classes,
+                n_support=n_support, n_query=n_query
+            )
+        except AssertionError:
+            if print_batch_stats:
+                print(f"Skipping batch {batch_idx} (not enough examples per class)")
+            continue
+
+        # === Embed ===
+        with torch.no_grad():
+            support_emb = model.support_encoder(support_x)
+            task_emb = model.task_encoder(query_x)
+
+            # === Apply prototype attention ===
+            task_emb_adapted = model.attention_transform_with_prototypes(
+                support_emb, support_y, task_emb, num_classes=num_classes
+            )
+
+            logits = model.classifier_head(task_emb_adapted)
+
+            loss = loss_fn(logits, query_y).item()
+            preds = logits.argmax(dim=1)
+
+        test_loss += loss
+        correct += (preds == query_y).sum().item()
+        total_query += query_y.size(0)
+
+        if print_batch_stats:
+            progress_bar.set_description(
+                f"Batch {batch_idx + 1}/{len(dataloader)}, "
+                f"Loss: {loss:.6f}"
+            )
+
+    avg_loss = test_loss / len(dataloader)
+    accuracy = correct / total_query if total_query > 0 else 0.0
+
+    print(f"Test Accuracy: {100 * accuracy:.1f}%, Test Loss: {avg_loss:.6f}\n")
+    return avg_loss, accuracy
