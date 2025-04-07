@@ -571,15 +571,22 @@ def test_model_episodic(
 
         # === Embed ===
         with torch.no_grad():
-            support_emb = model.support_encoder(support_x)
-            task_emb = model.task_encoder(query_x)
+            # ===== Encode support and query sets =====
+            _ = model.support_encoder(support_x)
+            support_emb = model.support_encoder.get_embeddings()
+            # remove the singleton dimension
+            support_emb = support_emb.squeeze(-1)
+
+            _ = model.encoder(query_x)
+            task_emb = model.encoder.get_embeddings()
+            task_emb = task_emb.squeeze(-1)
 
             # === Apply prototype attention ===
             task_emb_adapted = model.attention_transform_with_prototypes(
                 support_emb, support_y, task_emb, num_classes=num_classes
             )
 
-            logits = model.classifier_head(task_emb_adapted)
+            logits = model.classifier_head(task_emb_adapted).squeeze(-1).squeeze(-1)
 
             loss = loss_fn(logits, query_y).item()
             preds = logits.argmax(dim=1)
