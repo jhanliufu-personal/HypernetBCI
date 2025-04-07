@@ -26,8 +26,8 @@ from utils import (
 # ------------------------- Define meta parameters -------------------------
 # --------------------------------------------------------------------------
 
-subject_ids_lst = list(range(1, 14))
-# subject_ids_lst = [1, 2]
+# subject_ids_lst = list(range(1, 14))
+subject_ids_lst = [1, 2, 3]
 preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
 
 # Hyperparameters
