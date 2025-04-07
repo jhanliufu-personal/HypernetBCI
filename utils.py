@@ -491,19 +491,19 @@ def train_one_epoch_episodic(
 
         _ = model.encoder(query_x)
 
-        print(query_x.shape)
+        # print(query_x.shape)
 
         task_emb = model.encoder.get_embeddings()
         # remove the singleton dimension
         task_emb = task_emb.squeeze(-1)
 
-        print(task_emb.shape)
+        # print(task_emb.shape)
 
         task_emb_adapted = model.attention_transform_with_prototypes(
             support_emb, support_y, task_emb, num_classes=num_classes
         )
 
-        print(task_emb_adapted.shape)
+        # print(task_emb_adapted.shape)
 
         # ===== Final classification head =====
         # [batch_size_query, num_classes]

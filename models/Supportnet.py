@@ -89,7 +89,7 @@ class Supportnet(torch.nn.Module):
         device = task_emb.device
         D, T = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
 
-        print(task_emb.shape)
+        # print(task_emb.shape)
 
         # Step 1: Compute class prototypes
         class_prototypes = torch.zeros((num_classes, D, T), device=device)
@@ -97,7 +97,7 @@ class Supportnet(torch.nn.Module):
             class_mask = (support_y == c)
             if class_mask.sum() > 0:
                 proto = support_emb[class_mask].mean(dim=0)  # [40, 144, 1]
-                print(f'The shape of proto is {proto.shape}')
+                # print(f'The shape of proto is {proto.shape}')
                 class_prototypes[c] = proto#.squeeze(-1)      # [40, 144]
 
         # Step 2: Transpose task_emb to [B, T, D]
@@ -123,7 +123,7 @@ class Supportnet(torch.nn.Module):
         # Step 3: [B, T, D] → [B, D, T, 1]
         updated = torch.cat(output, dim=1)        # [B, T, D]
         updated = updated.permute(0, 2, 1).unsqueeze(-1)  # [B, D, T, 1]
-        print(f'The shape of updated is {updated.shape}')
+        # print(f'The shape of updated is {updated.shape}')
 
         return updated
 

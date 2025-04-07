@@ -19,7 +19,7 @@ from braindecode.datasets import BaseConcatDataset
 from models.Embedder import ShallowFBCSPEncoder
 from models.Supportnet import Supportnet
 from utils import (
-    freeze_all_param_but, train_one_epoch_episodic, test_model, load_from_pickle
+    freeze_all_param_but, train_one_epoch_episodic, test_model_episodic, load_from_pickle
     )
 from loss import contrastive_loss_btw_subject
 
@@ -314,7 +314,7 @@ for i, target_subject in enumerate(subject_ids_lst):
                 num_classes=n_classes
             )
 
-            valid_loss, valid_acc = test_model(
+            valid_loss, valid_acc = test_model_episodic(
                 src_valid_loader,
                 supportnet,
                 pred_loss_fn,
