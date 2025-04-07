@@ -349,6 +349,8 @@ for i, target_subject in enumerate(subject_ids_lst):
     if dict_results.get(dict_key) is None:
         target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
         target_loader = DataLoader(target_dataset, batch_size=batch_size)
+
+        pred_loss_fn = torch.nn.CrossEntropyLoss()
         target_loss, target_acc = test_model_episodic(
             target_loader, 
             supportnet, 
