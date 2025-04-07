@@ -557,7 +557,7 @@ def test_model_episodic(
             )
         except AssertionError:
             if print_batch_stats:
-                print(f"Skipping batch {batch_idx} (not enough examples per class)")
+                print(f"Skipping batch {batch_idx} in test (not enough examples per class)")
             continue
 
         # === Embed ===
@@ -641,7 +641,7 @@ def train_one_epoch_meta_subject(
             )
         except AssertionError:
             if print_batch_stats:
-                print(f"Skipping batch {batch_idx} (not enough class examples)")
+                print(f"Skipping batch {batch_idx} in train (not enough class examples)")
             continue
 
         print(f'Shape of support_x is {support_x.shape}')
