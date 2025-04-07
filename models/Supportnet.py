@@ -110,12 +110,19 @@ class Supportnet(torch.nn.Module):
         output = []
         # Projection per time step — per time step
         task_emb = task_emb.transpose(1, 2)  # From [B, C, T] to [B, T, C]
+        class_prototypes = class_prototypes.transpose(1, 2)
         for t in range(T):
-            x = task_emb[:, t]
-            print(x.shape)
 
-            q = self.query_layer(x) # [batch_size, dim]         
-            k = self.key_layer(class_prototypes[:, t]) # [num_classes, dim]         
+            x = task_emb[:, t]
+            # print(f'Shape of x is {x.shape}')
+
+            q = self.query_layer(x) # [batch_size, dim]   
+            # print(f'Shape of q is {q.shape}')
+
+            # print(f'Shape of c is {class_prototypes[:, t].shape}')
+            k = self.key_layer() # [num_classes, dim]     
+            # print(f'Shape of k is {k.shape}')
+
             v = self.value_layer(class_prototypes[:, t]) # [num_classes, dim]      
 
             # [batch_size, num_classes]
@@ -129,7 +136,10 @@ class Supportnet(torch.nn.Module):
             updated = attended + task_emb[:, t] # [batch_size, dim]           
             output.append(updated.unsqueeze(1)) # Keep time dim                 
 
-        return torch.cat(output, dim=1)
+        rtn = torch.cat(output, dim=1)
+        print(f'Shape of rtn is {rtn.shape}')
+
+        return rtn
 
 
     def forward(self, x):
