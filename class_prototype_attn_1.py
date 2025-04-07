@@ -98,17 +98,19 @@ for i, target_subject in enumerate(subject_ids_lst):
 
     dict_key = f'adapt_to_{target_subject}'
 
-    support_net_folder = 'CL_between_subjects_6'
+    # support_net_folder = 'CL_between_subjects_6'
     support_encoder_path = os.path.join(
         dir_results, 
+        experiment_folder_name,
         # f'{experiment_folder_name}/', 
-        support_net_folder,
+        # support_net_folder,
         f'{dict_key}_support_encoder.pth'
     )
     supportnet_path = os.path.join(
         dir_results, 
+        experiment_folder_name,
         # f'{experiment_folder_name}/', 
-        support_net_folder,
+        # support_net_folder,
         f'{dict_key}_supportnet.pth'
     )
     print(f'Adapt model from multiple sources to target subject {target_subject}')
@@ -157,97 +159,97 @@ for i, target_subject in enumerate(subject_ids_lst):
         'drop',
         n_classes
     )
-    support_encoder.model.load_state_dict(torch.load(support_encoder_path))
-    # Freeze support encoder
-    freeze_all_param_but(support_encoder.model, [])
+    # support_encoder.model.load_state_dict(torch.load(support_encoder_path))
+    # # Freeze support encoder
+    # freeze_all_param_but(support_encoder.model, [])
     if cuda:
         support_encoder.cuda()
 
-    # if os.path.exists(support_encoder_path) and os.path.getsize(support_encoder_path) > 0:
-    #     print(f'A support encoder trained without subject {target_subject} exists')
-    #     support_encoder.model.load_state_dict(torch.load(support_encoder_path))
-    # else:
-    #     support_optimizer = torch.optim.AdamW(
-    #         support_encoder.parameters(),
-    #         lr=lr, 
-    #         weight_decay=weight_decay)
-    #     support_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-    #         support_optimizer,
-    #         T_max=n_epochs - 1
-    #     )
-    #     emb_loss_fn = contrastive_loss_btw_subject(
-    #         src_subject_count, 
-    #         subject_batch_size, 
-    #         batch_size,
-    #         temperature=temperature,
-    #         device=device
-    #     )
+    if os.path.exists(support_encoder_path) and os.path.getsize(support_encoder_path) > 0:
+        print(f'A support encoder trained without subject {target_subject} exists')
+        support_encoder.model.load_state_dict(torch.load(support_encoder_path))
+    else:
+        support_optimizer = torch.optim.AdamW(
+            support_encoder.parameters(),
+            lr=lr, 
+            weight_decay=weight_decay)
+        support_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            support_optimizer,
+            T_max=n_epochs - 1
+        )
+        emb_loss_fn = contrastive_loss_btw_subject(
+            src_subject_count, 
+            subject_batch_size, 
+            batch_size,
+            temperature=temperature,
+            device=device
+        )
 
-    #     #############################################################
-    #     ################### Contrastive learning ####################
-    #     #############################################################
-    #     embedding_loss_lst = []
-    #     for epoch in range(1, n_epochs + 1):
-    #         print(f"Epoch {epoch}/{n_epochs}: ", end="")
+        #############################################################
+        ################### Contrastive learning ####################
+        #############################################################
+        embedding_loss_lst = []
+        for epoch in range(1, n_epochs + 1):
+            print(f"Epoch {epoch}/{n_epochs}: ", end="")
 
-    #         support_encoder.train()
-    #         embedding_loss, train_sample_cnt = 0, 0
-    #         # Assemble batch data from individual subject loaders
-    #         for batch_idx in range(n_batches):
-    #             batch_x = []
-    #             batch_y = []
+            support_encoder.train()
+            embedding_loss, train_sample_cnt = 0, 0
+            # Assemble batch data from individual subject loaders
+            for batch_idx in range(n_batches):
+                batch_x = []
+                batch_y = []
 
-    #             # Get samples from each person
-    #             for subject_id, subject_loader in dict_src_subject_loader.items():
-    #                 try:
-    #                     cur_x, cur_y, _ = next(subject_loader)
-    #                     # Check if batch size is smaller than desired
-    #                     if cur_x.size(0) < subject_batch_size:
-    #                         raise StopIteration
+                # Get samples from each person
+                for subject_id, subject_loader in dict_src_subject_loader.items():
+                    try:
+                        cur_x, cur_y, _ = next(subject_loader)
+                        # Check if batch size is smaller than desired
+                        if cur_x.size(0) < subject_batch_size:
+                            raise StopIteration
                         
-    #                 except StopIteration:
-    #                     # Re-initialize subject-specific loader
-    #                     subject_loader = iter(DataLoader(
-    #                         dataset_splitted_by_subject.get(subject_id),
-    #                         batch_size=subject_batch_size,
-    #                         shuffle=True
-    #                     ))
-    #                     # This may not be allowed at runtime
-    #                     dict_src_subject_loader.update({subject_id: subject_loader})
-    #                     cur_x, cur_y, _ = next(subject_loader)
+                    except StopIteration:
+                        # Re-initialize subject-specific loader
+                        subject_loader = iter(DataLoader(
+                            dataset_splitted_by_subject.get(subject_id),
+                            batch_size=subject_batch_size,
+                            shuffle=True
+                        ))
+                        # This may not be allowed at runtime
+                        dict_src_subject_loader.update({subject_id: subject_loader})
+                        cur_x, cur_y, _ = next(subject_loader)
 
-    #                 batch_x.append(cur_x)
-    #                 batch_y.append(cur_y)
+                    batch_x.append(cur_x)
+                    batch_y.append(cur_y)
 
-    #             batch_x, batch_y = torch.cat(batch_x, dim=0).to(device), torch.cat(batch_y, dim=0).to(device)
-    #             assert batch_x.size(0) == batch_size, "Overall batch size is incorrect"
-    #             train_sample_cnt += batch_size
+                batch_x, batch_y = torch.cat(batch_x, dim=0).to(device), torch.cat(batch_y, dim=0).to(device)
+                assert batch_x.size(0) == batch_size, "Overall batch size is incorrect"
+                train_sample_cnt += batch_size
 
-    #             support_optimizer.zero_grad()
-    #             # Feed through encoder
-    #             _ = support_encoder(batch_x)
-    #             embeddings = support_encoder.get_embeddings()
+                support_optimizer.zero_grad()
+                # Feed through encoder
+                _ = support_encoder(batch_x)
+                embeddings = support_encoder.get_embeddings()
                 
-    #             # Get embedding at the last timestamp
-    #             embeddings = embeddings.squeeze(-1)[:,:,-1]
+                # Get embedding at the last timestamp
+                embeddings = embeddings.squeeze(-1)[:,:,-1]
 
-    #             # Inter-subject contrastive loss
-    #             emb_loss = emb_loss_fn(embeddings)
-    #             emb_loss.backward()
-    #             support_optimizer.step()  
-    #             support_optimizer.zero_grad()
-    #             embedding_loss += emb_loss.item()
+                # Inter-subject contrastive loss
+                emb_loss = emb_loss_fn(embeddings)
+                emb_loss.backward()
+                support_optimizer.step()  
+                support_optimizer.zero_grad()
+                embedding_loss += emb_loss.item()
 
-    #         embedding_loss /=  train_sample_cnt
-    #         print(f"Average Contrastive Loss: {embedding_loss:.6f}, ")
-    #         embedding_loss_lst.append(embedding_loss)
+            embedding_loss /=  train_sample_cnt
+            print(f"Average Contrastive Loss: {embedding_loss:.6f}, ")
+            embedding_loss_lst.append(embedding_loss)
 
-    #     # Save the trained model
-    #     print('Save trained support encoder')
-    #     torch.save(deepcopy(support_encoder.model.state_dict()), support_encoder_path)
+        # Save the trained model
+        print('Save trained support encoder')
+        torch.save(deepcopy(support_encoder.model.state_dict()), support_encoder_path)
 
-    # # Freeze support encoder
-    # freeze_all_param_but(support_encoder.model, [])
+    # Freeze support encoder
+    freeze_all_param_but(support_encoder.model, [])
 
 # --------------------------------------------------------------------------
 # ------------------------- Train classifier net ---------------------------
