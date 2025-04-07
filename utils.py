@@ -486,6 +486,9 @@ def train_one_epoch_episodic(
         # ===== Encode support and query sets =====
         _ = model.support_encoder(support_x)
         support_emb = model.support_encoder.get_embeddings()
+        # remove the singleton dimension
+        support_emb = support_emb.squeeze(-1)
+
         _ = model.encoder(query_x)
 
         print(query_x.shape)
