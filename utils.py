@@ -449,7 +449,7 @@ def train_one_epoch_episodic(
     epoch: int, 
     device="cuda", 
     num_classes = 4,
-    print_batch_stats=False,
+    print_batch_stats=False
 ):
 
     # Episodic setup
@@ -491,26 +491,17 @@ def train_one_epoch_episodic(
 
         _ = model.encoder(query_x)
 
-        # print(query_x.shape)
-
         task_emb = model.encoder.get_embeddings()
         # remove the singleton dimension
         task_emb = task_emb.squeeze(-1)
-
-        # print(task_emb.shape)
 
         task_emb_adapted = model.attention_transform_with_prototypes(
             support_emb, support_y, task_emb, num_classes=num_classes
         )
 
-        # print(task_emb_adapted.shape)
-
         # ===== Final classification head =====
         # [batch_size_query, num_classes]
         logits = model.classifier(task_emb_adapted).squeeze(-1).squeeze(-1)
-
-        # print(f'The shape of logits is {logits.shape}')
-        # print(f'The shape of query_y is {query_y.shape}')
 
         # ===== Loss and optimization =====
         loss = loss_fn(logits, query_y)
@@ -605,4 +596,82 @@ def test_model_episodic(
     accuracy = correct / total_query if total_query > 0 else 0.0
 
     print(f"Test Accuracy: {100 * accuracy:.1f}%, Test Loss: {avg_loss:.6f}\n")
+    return avg_loss, accuracy
+
+
+"""
+Meta-learning training loop where each subject is treated as a separate task.
+In each iteration, we sample one subject and construct a support/query split from it.
+"""
+def train_one_epoch_meta_subject(
+    subject_loaders,
+    model: nn.Module,
+    loss_fn,
+    optimizer,
+    scheduler: LRScheduler,
+    device="cuda",
+    num_classes=4,
+    print_batch_stats=False
+):
+    
+    model.train()
+    total_loss, correct, total_query = 0.0, 0.0, 0
+
+    batch_size = subject_loaders[0].batch_size
+    n_support = batch_size // (2 * num_classes)
+    n_query = batch_size // (2 * num_classes)
+
+    progress_bar = tqdm(range(len(subject_loaders)), disable=not print_batch_stats)
+    for batch_idx in progress_bar:
+        # Randomly pick a subject
+        subject_loader = random.choice(subject_loaders)
+        try:
+            X, y, _ = next(iter(subject_loader))
+        except StopIteration:
+            continue
+
+        X, y = X.to(device), y.to(device)
+
+        try:
+            support_x, support_y, query_x, query_y = sample_episode(
+                X, y, num_classes=num_classes, n_support=n_support, n_query=n_query
+            )
+        except AssertionError:
+            if print_batch_stats:
+                print(f"Skipping batch {batch_idx} (not enough class examples)")
+            continue
+
+        # ===== Encode support and query sets =====
+        _ = model.support_encoder(support_x)
+        support_emb = model.support_encoder.get_embeddings()
+        # remove the singleton dimension
+        support_emb = support_emb.squeeze(-1)
+
+        _ = model.encoder(query_x)
+
+        task_emb = model.encoder.get_embeddings()
+        # remove the singleton dimension
+        task_emb = task_emb.squeeze(-1)
+
+        task_emb_adapted = model.attention_transform_with_prototypes(
+            support_emb, support_y, task_emb, num_classes=num_classes
+        )
+
+        # ===== Final classification head =====
+        # [batch_size_query, num_classes]
+        logits = model.classifier(task_emb_adapted).squeeze(-1).squeeze(-1)
+
+        # ===== Loss and optimization =====
+        loss = loss_fn(logits, query_y)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+        correct += (logits.argmax(1) == query_y).sum().item()
+        total_query += query_y.size(0)
+
+    scheduler.step()
+    avg_loss = total_loss / len(subject_loaders)
+    accuracy = correct / total_query if total_query > 0 else 0.0
+
     return avg_loss, accuracy
