@@ -287,7 +287,8 @@ for i, target_subject in enumerate(subject_ids_lst):
             batch_size=batch_size
         )
 
-        pred_loss_fn = torch.nn.NLLLoss()
+        # pred_loss_fn = torch.nn.NLLLoss()
+        pred_loss_fn = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(
             supportnet.parameters(),
             lr=lr, 
