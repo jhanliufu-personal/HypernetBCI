@@ -87,7 +87,7 @@ class Supportnet(torch.nn.Module):
             updated_task_embedding: [batch_size, 144, 40]
         """
         device = task_emb.device
-        T, D = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
+        D, T = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
 
         print(task_emb.shape)
 
@@ -101,11 +101,13 @@ class Supportnet(torch.nn.Module):
                 class_prototypes[c] = proto#.squeeze(-1)      # [40, 144]
 
         # Step 2: Transpose task_emb to [B, T, D]
-        task_emb = task_emb.squeeze(-1).permute(0, 2, 1)  # [B, T, D]
+        # task_emb = task_emb.squeeze(-1).permute(0, 2, 1)  # [B, T, D]
+        task_emb = task_emb.permute(0, 2, 1)  # [B, T, D]
 
         output = []
         for t in range(T):
             x_t = task_emb[:, t]  # [B, D]
+            print(f'The shape of x_t is {x_t.shape}')
 
             q = self.query_layer(x_t)                   # [B, dim]
             k = self.key_layer(class_prototypes[:, :, t])   # [num_classes, dim]
@@ -121,6 +123,8 @@ class Supportnet(torch.nn.Module):
         # Step 3: [B, T, D] → [B, D, T, 1]
         updated = torch.cat(output, dim=1)        # [B, T, D]
         updated = updated.permute(0, 2, 1).unsqueeze(-1)  # [B, D, T, 1]
+        print(f'The shape of updated is {updated.shape}')
+
         return updated
 
 
