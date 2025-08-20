@@ -78,9 +78,8 @@ HypernetBCI/
 - **`data_utils/`**: Scripts for downloading, preprocessing, and analyzing EEG datasets
 - **`models/`**: Neural network architectures including hypernetworks, embedders, and support networks
 - **`experiments/`**: Your research contributions organized by methodology (hypernetworks, contrastive learning, baselines)
-- **`baselines/`**: External baseline methods (MAPU, CLUDA) for comparison
+- **`baselines/`**: External baseline methods ([MAPU](https://arxiv.org/html/2406.02635v2), [CLUDA](https://arxiv.org/pdf/2206.06243)) for comparison
 - **`config/`**: JSON configuration files specifying hyperparameters for different experiments
-- **`results/`**: Generated experiment results, plots, and trained model checkpoints
 
 ## HyperNet Experiments
 
