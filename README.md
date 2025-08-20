@@ -1,10 +1,11 @@
 # HypernetBCI
 
-Quick calibration of deep learning-based brain-computer interface (BCI) models using hypernetworks and contrastive learning.
+Model-agnostic Unsupervised Domain Adaptation (UDA) using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work.
 
 ## Table of Contents
 
 - [Quickstart](#quickstart)
+- [Evaluation](#evaluation) 
 - [Codebase Structure](#codebase-structure)
 - [HyperNet Experiments](#hypernet-experiments)
 - [SupportNet Experiments](#supportnet-experiments)
@@ -15,7 +16,7 @@ Quick calibration of deep learning-based brain-computer interface (BCI) models u
 
 ```bash
 # Clone the repository
-git clone <repository_url>
+git clone git@github.com:jhanliufu-personal/HypernetBCI.git
 cd HypernetBCI/METHODS/HypernetBCI
 
 # Create conda environment
@@ -35,6 +36,11 @@ python run_experiment.py --experiment-class FromScratchExperiment --gpu 0
 # Run with custom configuration
 python run_experiment.py --experiment-class ClassPrototypeAttentionExperiment --config config/example_config.json --gpu 0
 ```
+
+## Evaluation
+
+We focus on Unsupervised Domain Adaptation (UDA). The specific task we take on is quickly calibrating a pretrained DL-based
+BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. 
 
 ## Codebase Structure
 
@@ -61,7 +67,6 @@ HypernetBCI/
 │   ├── MAPU/                      # Multi-source Adversarial Domain Adaptation
 │   └── CLUDA/                     # Cross-participant Learning using Domain Adaptation
 ├── config/                        # Experiment configuration files (JSON)
-├── results/                       # Experiment outputs and saved models
 └── run_experiment.py              # Unified experiment runner
 ```
 
@@ -79,7 +84,10 @@ HypernetBCI/
 
 ### Overview
 
-HyperNetworks generate subject-specific weights for BCI models, enabling rapid calibration with minimal data. Instead of fine-tuning entire models, hypernetworks generate only the final classification layer weights based on subject-specific embeddings. This approach dramatically reduces calibration time and data requirements.
+[HyperNetworks](https://arxiv.org/abs/1609.09106) are small-scale neural networks that generate the weights of a larger
+network (main network). We explore using hypernetworks for unsupervised adaptation. We jointly pretrain the hypernetwork and
+the main network on multiple source domains. At test time, we use the hypernetwork to generate weight corrections ([LoRA](https://arxiv.org/abs/2106.09685)-style) for the main network to adapt it for the target domain. This adaptation approach
+is fully unsupervised and free of iterative optimization. Adaption is done through one forward pass.
 
 ### Experiment Types
 
