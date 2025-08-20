@@ -1,0 +1,1 @@
+"""CLUDA (Cross-participant Learning using Domain Adaptation) baseline implementation."""
