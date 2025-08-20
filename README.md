@@ -1,6 +1,6 @@
 # HypernetBCI
 
-Model-agnostic Unsupervised Domain Adaptation (UDA) using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work. Publication is underway.
+Zero-shot and few-shot model adaptation using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work. Publication is underway.
 
 ## Table of Contents
 
@@ -39,10 +39,10 @@ python run_experiment.py --experiment-class ClassPrototypeAttentionExperiment --
 
 ## Evaluation
 
-We focus on Unsupervised Domain Adaptation (UDA). The specific task we take on is quickly calibrating a pretrained DL-based
-BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. Datasets and model implementations are accessed from the [braindecode](https://braindecode.org/stable/index.html) library.
+We focus on domain adaptation (DA). The specific task we take on is quickly calibrating a pretrained DL-based
+BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. Datasets and model implementations are from the [braindecode](https://braindecode.org/stable/index.html) library.
 
-We compare our method against three baselines, two unsupervised and one supervised. [CLUDA](https://arxiv.org/pdf/2206.06243) and [MAPU](https://arxiv.org/html/2406.02635v2) achieve UDA through contrastive learning and temporal imputation at test time. Although unsupervised, they require iterative optimization and source data for adaptation, which exclude them from time-sensitive and resource-constrained applications. 
+We compare our method against two baselines. [CLUDA](https://arxiv.org/pdf/2206.06243) and [MAPU](https://arxiv.org/html/2406.02635v2) achieve zero-shot adaptation through contrastive learning and temporal imputation at test time. Although unsupervised, they require iterative optimization and source data for adaptation, which exclude them from time-sensitive and resource-constrained applications. We also compare our method to supervised fine tuning.
 
 ## Codebase Structure
 
@@ -101,28 +101,27 @@ is fully unsupervised and free of iterative optimization. Adaption is done throu
 
 ### Key Components
 
-- **Embedders**: Extract subject-specific features (EEGConformer, ShallowFBCSP, Conv1D)
-- **Hypernetworks**: Generate classification weights from embeddings
-- **Primary Networks**: Base BCI models (ShallowFBCSPNet, EEGConformer)
-- **Calibration**: Aggregate embeddings from calibration data to generate final weights
+- **Embedders**: Extract subject-specific features (```EEGConformer```, ```ShallowFBCSP```, ```Conv1D```)
+- **Hypernetworks**: Generate weight tensors from embeddings, currently implemented with ```torch.nn.Linear```
+- **Main networks**: Base BCI models (```ShallowFBCSPNet```, ```EEGConformer```)
 
 ## SupportNet Experiments
 
 ### Overview
 
-SupportNet uses **contrastive learning** and **class prototype attention** for few-shot BCI adaptation. The approach learns generalizable representations through contrastive learning between subjects, then uses prototype attention mechanisms to adapt to new subjects with minimal labeled data. Meta-learning treats each subject as a separate "task" for improved generalization.
+**SupportNet** is a few-shot adaptation framework using **contrastive learning** and **class prototype attention**. It learns generalizable subject-identity representations through contrastive learning between subjects. It then uses prototype attention mechanisms to adapt to new subject by attending over class prototypes from source subjects. We use meta learning techniques to enable better generalization.
 
 ### Experiment Types
 
 | Experiment | Description | Key Features |
 |------------|-------------|--------------|
-| **ClassPrototypeAttentionExperiment** | Few-shot adaptation using labeled support sets and class prototypes | • **Prototype attention**<br>• Episodic training<br>• Support/query sets |
+| **ClassPrototypeAttentionExperiment** | Few-shot adaptation using labeled support sets and class prototypes | • **Class prototype attention**<br>• Episodic training<br>• Support/query sets |
 | **ClassPrototypeAttentionMetaExperiment** | Meta-learning version where each subject is treated as a separate task | • **Meta-learning** approach<br>• Subject-as-task paradigm<br>• Pre-trained support encoder |
-| **ContrastiveBetweenSubjectsExperiment** | Pure contrastive learning between subjects to learn generalizable representations | • **Contrastive learning**<br>• Cross-subject representation<br>• Temperature-based loss |
+| **ContrastiveBetweenSubjectsExperiment** | Contrastive learning between subjects to learn generalizable representations | • **Contrastive learning**<br>• Cross-subject representation<br>• tSNE visualization |
 
 ### Key Components
 
-- **Support Encoder**: Extracts prototypical embeddings from support sets (frozen after pre-training)
+- **Support Encoder**: Contrastively trained, extracts prototypical embeddings from support sets (frozen after pre-training)
 - **Task Encoder**: Extracts embeddings from query/target data
 - **Attention Mechanism**: Allows task embeddings to attend over class prototypes
 - **Episodic Training**: Few-shot learning with support/query episodes
