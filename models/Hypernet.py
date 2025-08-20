@@ -32,43 +32,38 @@ class Hypernet(torch.nn.Module):
 class LinearHypernet(Hypernet):
     def __init__(
             self, 
-            embedding_shape: torch.Size, 
-            weight_shape: torch.Size
+            input_shape: torch.Size, 
+            output_shape: torch.Size
         ) -> None:
-        super(LinearHypernet, self).__init__(embedding_shape, weight_shape)
+        super(LinearHypernet, self).__init__(input_shape, output_shape)
         # Initialize weight generation layer
-        # self.input_size = embedding_shape[0] * embedding_shape[1]
-        self.input_size = torch.prod(torch.tensor(embedding_shape)).item()
-        self.output_size = torch.prod(torch.tensor(weight_shape)).item()
+        self.input_shape = input_shape
+        self.input_size = torch.prod(torch.tensor(input_shape)).item()
+
+        self.output_shape = output_shape
+        self.output_size = torch.prod(torch.tensor(output_shape)).item()
+
         self.fc = torch.nn.Linear(self.input_size, self.output_size)
 
-    def forward(self, embedding):
-        """
-        Parameters
-        ---------------------------------------
-        embedding: embedding for one input data sample, has
-        shape: embedding_shape
-
-        return
-        ---------------------------------------
-        weight_tensor: weight tensor generated from one
-        embedding. has shape: weight_shape
-        """
-        # Check embedding shape
-        assert embedding.shape == self.embedding_shape, 'Embedding has wrong shape'
-        # if embedding.shape != self.embedding_shape:
-        #     raise ValueError('Embedding has wrong shape')
+    def forward(self, x):
+        # Check input shape
+        assert x.shape == self.input_shape, (
+            'LinearHypernet.forward(): '
+            'Input has wrong shape'
+        )
+        
+        # print(x.is_cuda)
 
         # Flatten the input tensor
-        embedding_flattened = embedding.view(-1, self.input_size)
+        x_flattened = x.view(-1, self.input_size)
         # Apply the fully connected layer
-        weight_flattened = self.fc(embedding_flattened)
+        out_flattened = self.fc(x_flattened)
         # Reshape the output to the desired weight shape
-        weight_reshaped = weight_flattened.view(*(self.weight_shape))
+        out_reshaped = out_flattened.view(*(self.output_shape))
 
         # Check weight tensor shape
-        assert weight_reshaped.shape == self.weight_shape, 'The generated weight tensor has wrong shape'
-        # if weight_reshaped.shape != self.weight_shape:
-        #     raise ValueError('The generated weight tensor has wrong shape')
+        assert out_reshaped.shape == self.output_shape, (
+            'LinearHypernet.forward(): Output has wrong shape'
+        )
 
-        return weight_reshaped
+        return out_reshaped

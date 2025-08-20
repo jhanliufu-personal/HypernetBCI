@@ -8,45 +8,46 @@ being one "task"
 import os
 import torch
 import pickle as pkl
-import random
 from copy import deepcopy
 from braindecode.datautil import load_concat_dataset
-from torch.utils.data import DataLoader
-# from braindecode.datasets import BaseConcatDataset
 
 from models.Embedder import ShallowFBCSPEncoder
 from models.Supportnet import Supportnet
-from utils import (
-    freeze_all_param_but, train_one_epoch_meta_subject, 
-    test_model_episodic, load_from_pickle
-    )
-# from loss import contrastive_loss_btw_subject
+from utils import freeze_all_param_but, load_from_pickle
+from class_proto_attn_meta.class_proto_attn_meta_train_test import (
+    train_one_epoch_meta_subject, test_model_episodic, get_balanced_loader
+)
 
 # --------------------------------------------------------------------------
-# ------------------------- Define meta parameters -------------------------
+# ------------------------- For saving results -----------------------------
 # --------------------------------------------------------------------------
-
-# subject_ids_lst = list(range(1, 14))
-subject_ids_lst = [1, 2, 3]
-preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
-
-# Hyperparameters
-n_classes = 4
-batch_size = 72
-lr = 6.5e-4
-weight_decay = 0
-n_epochs = 30
-# temperature = 0.5
-
-gpu_number = '2'
-experiment_version = 1
-
 dir_results = 'results/'
+experiment_version = 2
 experiment_folder_name = f'class_prototype_attention_meta_{experiment_version}'
 print(experiment_folder_name)
 os.makedirs(os.path.join(dir_results, experiment_folder_name), exist_ok=True)
 training_record_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'training.pkl')
 results_path = os.path.join(dir_results, f'{experiment_folder_name}/', 'results.pkl')
+
+# --------------------------------------------------------------------------
+# ------------------------- Define meta parameters -------------------------
+# --------------------------------------------------------------------------
+
+subject_ids_lst = list(range(1, 14))
+# subject_ids_lst = [1, 2, 3]
+preprocessed_dir = 'data/Schirrmeister2017_preprocessed'
+
+# Hyperparameters
+n_classes = 4
+lr = 6.5e-4
+weight_decay = 0
+n_epochs = 30
+
+gpu_number = '0'
+
+n_prototype = 5
+n_query = 20
+n_samples_per_class = n_prototype + n_query
 
 # --------------------------------------------------------------------------
 # ------------------------- Load data --------------------------------------
@@ -105,33 +106,21 @@ for i, target_subject in enumerate(subject_ids_lst):
     print(f'Adapt model from multiple sources to target subject {target_subject}')
 
     # Create training (subject specific) and validation dataloaders
-    dict_src_subject_loader = {}
+    target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
+    # target_loader = DataLoader(target_dataset, batch_size=batch_size)
+    target_loader = get_balanced_loader(target_dataset, n_classes, n_samples_per_class)
+
+    # dict_src_subject_loader = {}
     src_train_loaders_lst = []
-    src_valid_loader_lst = []
+    # src_valid_loader_lst = []
     for k, v in dataset_splitted_by_subject.items():
 
         if k == f'{target_subject}':
             print(f'Excluding data from target subject {target_subject}')
             continue
 
-        subject_splitted_by_run = v.split('run')
-        
-        # Train set
-        subject_train_set = subject_splitted_by_run.get('0train')
         src_train_loaders_lst.append(
-            DataLoader(
-                subject_train_set, batch_size=batch_size, 
-                shuffle=True, drop_last=True
-            )
-        )
-
-        # Valid set
-        subject_test_set = subject_splitted_by_run.get('1test')
-        src_valid_loader_lst.append(
-            DataLoader(
-                subject_test_set, batch_size=batch_size, 
-                shuffle=True, drop_last=True
-            )
+            get_balanced_loader(v, n_classes, n_samples_per_class)
         )
 
 # --------------------------------------------------------------------------
@@ -195,15 +184,18 @@ for i, target_subject in enumerate(subject_ids_lst):
                 pred_loss_fn,
                 optimizer,
                 scheduler,
+                n_prototype,
+                n_query,
                 device,
                 num_classes=n_classes
             )
 
             valid_loss, valid_acc = test_model_episodic(
-                random.choice(src_valid_loader_lst),
-                supportnet,
+                target_loader, 
+                supportnet, 
                 pred_loss_fn,
-                num_classes=n_classes
+                n_prototype,
+                n_query,
             )
 
             train_acc_lst.append(train_acc)
@@ -226,32 +218,3 @@ for i, target_subject in enumerate(subject_ids_lst):
         })
         with open(training_record_path, 'wb') as f:
             pkl.dump(dict_training, f)
-
-# --------------------------------------------------------------------------
-# ------------------------- Test on held-out subject -----------------------
-# --------------------------------------------------------------------------
-
-    if dict_results.get(dict_key) is None:
-        target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
-        target_loader = DataLoader(target_dataset, batch_size=batch_size)
-
-        pred_loss_fn = torch.nn.CrossEntropyLoss()
-        target_loss, target_acc = test_model_episodic(
-            target_loader, 
-            supportnet, 
-            pred_loss_fn
-        )
-
-        dict_results.update({
-            dict_key: target_acc
-        })
-        with open(results_path, 'wb') as f:
-            pkl.dump(dict_results, f)
-
-        print(f'Test accuracy on target subject: {target_acc*100:.2f}')
-
-    else:
-        print(
-            f'Supportnet has been tested with ' 
-            f'held-out data from subject {target_subject}'
-        )

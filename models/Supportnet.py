@@ -31,7 +31,11 @@ class Supportnet(torch.nn.Module):
         # support_emb assumed to have shape [40, 144, 1]; reshaped to [40]
         support_emb = support_emb.squeeze(-1)[:,:,-1]
         cur_batch_size = support_emb.size(0)
-        support_emb_broadcasted = support_emb.view(cur_batch_size, 40, 1, 1).expand(-1, -1, 144, 1)
+        support_emb_broadcasted = (
+            support_emb
+            .view(cur_batch_size, 40, 1, 1)
+            .expand(-1, -1, 144, 1)
+        )
         # the concated embedding should have shape [80, 144, 1]
         return torch.cat((emb, support_emb_broadcasted), dim=1)
     
@@ -78,7 +82,10 @@ class Supportnet(torch.nn.Module):
 
 
     def attention_transform_with_prototypes(
-        self, support_emb, support_y, task_emb, num_classes=4
+        self, 
+        proto_support_emb, proto_task_emb, proto_y, 
+        query_support_emb, query_task_emb,
+        num_classes=4
     ):
         """
         Apply attention over class prototypes at each time step independently.
@@ -86,44 +93,53 @@ class Supportnet(torch.nn.Module):
         Returns:
             updated_task_embedding: [batch_size, 144, 40]
         """
-        device = task_emb.device
-        D, T = task_emb.shape[1], task_emb.shape[2]  # T=144, D=40
-
-        # print(task_emb.shape)
+        device = query_task_emb.device
+        D, T = query_task_emb.shape[1], query_task_emb.shape[2]  # T=144, D=40
 
         # Step 1: Compute class prototypes
-        class_prototypes = torch.zeros((num_classes, D, T), device=device)
+        support_prototypes = torch.zeros((num_classes, D, T), device=device)
+        task_prototypes = torch.zeros((num_classes, D, T), device=device)
         for c in range(num_classes):
-            class_mask = (support_y == c)
+            class_mask = (proto_y == c)
             if class_mask.sum() > 0:
-                proto = support_emb[class_mask].mean(dim=0)  # [40, 144, 1]
-                # print(f'The shape of proto is {proto.shape}')
-                class_prototypes[c] = proto#.squeeze(-1)      # [40, 144]
+                support_prototypes[c] = proto_support_emb[class_mask].mean(dim=0)
+                task_prototypes[c] = proto_task_emb[class_mask].mean(dim=0)      
 
-        # Step 2: Transpose task_emb to [B, T, D]
-        # task_emb = task_emb.squeeze(-1).permute(0, 2, 1)  # [B, T, D]
-        task_emb = task_emb.permute(0, 2, 1)  # [B, T, D]
+        # Step 2: Transpose to [B, T, D]
+        query_task_emb = query_task_emb.permute(0, 2, 1)  # [B, T, D]
+        query_support_emb = query_support_emb.permute(0, 2, 1)  # [B, T, D]
 
         output = []
         for t in range(T):
-            x_t = task_emb[:, t]  # [B, D]
-            # print(f'The shape of x_t is {x_t.shape}')
+            # [B, D]
+            x_t = query_support_emb[:, t]
+            # From the task encoder  
+            residual = query_task_emb[:, t]  
 
-            q = self.query_layer(x_t)                   # [B, dim]
-            k = self.key_layer(class_prototypes[:, :, t])   # [num_classes, dim]
-            v = self.value_layer(class_prototypes[:, :, t]) # [num_classes, dim]
+            # [B, dim]
+            q = self.query_layer(x_t) 
+            # [num_classes, dim]                  
+            k = self.key_layer(support_prototypes[:, :, t])
+            # [num_classes, dim]   
+            v = self.value_layer(task_prototypes[:, :, t]) 
 
-            attn_scores = torch.matmul(q, k.T)          # [B, num_classes]
-            attn_weights = F.softmax(attn_scores, dim=-1)  # [B, num_classes]
-            attended = torch.matmul(attn_weights, v)    # [B, dim]
+            # [B, num_classes]
+            attn_scores = torch.matmul(q, k.T) 
+            # [B, num_classes]         
+            attn_weights = F.softmax(attn_scores, dim=-1)
+            # [B, dim]  
+            attended = torch.matmul(attn_weights, v)    
 
-            updated = attended + x_t  # residual
-            output.append(updated.unsqueeze(1))  # [B, 1, dim]
+            # residual
+            updated = attended + residual
+            # [B, 1, dim] 
+            output.append(updated.unsqueeze(1))  
 
         # Step 3: [B, T, D] → [B, D, T, 1]
-        updated = torch.cat(output, dim=1)        # [B, T, D]
-        updated = updated.permute(0, 2, 1).unsqueeze(-1)  # [B, D, T, 1]
-        # print(f'The shape of updated is {updated.shape}')
+        # [B, T, D]
+        updated = torch.cat(output, dim=1)   
+        # [B, D, T, 1]     
+        updated = updated.permute(0, 2, 1).unsqueeze(-1)
 
         return updated
 

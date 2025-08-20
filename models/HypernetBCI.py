@@ -24,7 +24,6 @@ class HyperBCINet(torch.nn.Module):
             embedding_shape: torch.Size, 
             sample_shape: torch.Size,
             hypernet: torch.nn.Module,
-            reference_tensor = None
         ) -> None:
         """
         Parameters
@@ -63,15 +62,6 @@ class HyperBCINet(torch.nn.Module):
         # hypernet / weight generator
         self.hypernet = hypernet
         
-        # reference tensor
-        if reference_tensor is not None:
-            self.reference_tensor = deepcopy(reference_tensor)
-        else:
-            # if not provided, use what the primary net comes with
-            self.reference_tensor = deepcopy(primary_net.final_layer.conv_classifier.weight)
-
-        self.distance_loss_func = torch.nn.MSELoss()
-
         ### ----------------------------------------------------------------------
         '''
         These are for saving intermediate outputs; embeddings and tensors
@@ -104,14 +94,6 @@ class HyperBCINet(torch.nn.Module):
 
         return aggregated_tensor
 
-
-    def calculate_tensor_distance(self):
-        """
-        Calculate the distance between the generated tensor and a reference tensor
-        """
-        return self.distance_loss_func(self.reference_tensor, self.aggregated_weight_tensor)
-
-
     def forward(self, x, aggr='Avg', random_update=False):
         """
         Parameters
@@ -133,9 +115,7 @@ class HyperBCINet(torch.nn.Module):
                 print('Functional call using RANDOM WEIGHT TENSOR')
                 return functional_call(self.primary_net, self.primary_params, x)
 
-            # print('Generate new embedding and weights')
             # generate embeddings
-            # print(f'Input x on device {x.device}')
             self.embeddings = self.embedder(x)
             # generate new weight tensors
             self.new_weight_tensors = torch.stack([self.hypernet(emb) for emb in self.embeddings])
@@ -146,9 +126,6 @@ class HyperBCINet(torch.nn.Module):
                 self.aggregated_weight_tensor = self.aggregate_tensors(self.new_weight_tensors, aggr=aggr)
                 assert self.aggregated_weight_tensor.shape == self.weight_shape, "Weight tensor has incorrect shape"
 
-                # update weights
-                # print('Update new tensor to model parameters')
-                # print(f'Aggregated tensor on device {self.aggregated_weight_tensor.device}')
                 self.primary_params.update({'final_layer.conv_classifier.weight': self.aggregated_weight_tensor})
 
             # else evaluate each input with its corresponding weight tensor
@@ -156,11 +133,5 @@ class HyperBCINet(torch.nn.Module):
                 assert not self.calibrating, "Must aggregate if in calibration mode"
                 return None
     
-        # # print(f'Primary net on device {self.primary_net.device}')
-        # if x.device != self.aggregated_weight_tensor.device:
-        #     print(f'x on device {x.device}, aggr tensor on device {self.aggregated_weight_tensor.device}')
-        # elif x.device != self.primary_params.get('conv_time_spat.conv_time.weight').device:
-        #     print(f"x on device {x.device}, other tensor in primary params on device {self.primary_params.get('conv_time_spat.conv_time.weight').device}")
-
         # print('Forward pass using functional call')
         return functional_call(self.primary_net, self.primary_params, x)
