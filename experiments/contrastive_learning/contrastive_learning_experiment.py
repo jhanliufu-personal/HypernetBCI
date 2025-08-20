@@ -5,6 +5,7 @@ Contrastive learning and class prototype attention experiments.
 import os
 from typing import Dict, Any, List, Optional, Tuple
 from copy import deepcopy
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -577,3 +578,341 @@ class ContrastiveBetweenSubjectsExperiment(ContrastiveLearningExperiment):
             'subject_embeddings': subject_embeddings,
             'evaluation_completed': True
         }
+
+
+class ClassPrototypeAttentionMetaExperiment(ContrastiveLearningExperiment):
+    """
+    Class prototype attention experiment using meta-learning approach.
+    Each subject is treated as a separate "task" in meta-learning style training.
+    Uses a pre-trained support encoder and trains a supportnet with meta-learning.
+    """
+    
+    def _get_experiment_name(self) -> str:
+        version = self.config.get('experiment_version', 1)
+        return f"ClassPrototypeAttentionMeta_{version}"
+    
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Get default configuration for meta-learning experiment."""
+        config = super()._get_default_config()
+        config.update({
+            "support_encoder_experiment": "class_prototype_attention_1",
+            "meta_batch_size": 72,
+            "use_cosine_scheduler": True,
+        })
+        return config
+    
+    def load_pretrained_support_encoder(self, target_subject: int):
+        """Load pre-trained support encoder from another experiment."""
+        support_encoder_folder = self.config.get('support_encoder_experiment', 'class_prototype_attention_1')
+        support_encoder_path = (
+            Path('results') / support_encoder_folder / 
+            f'adapt_to_{target_subject}_support_encoder.pth'
+        )
+        
+        if not support_encoder_path.exists():
+            raise FileNotFoundError(f"Pre-trained support encoder not found: {support_encoder_path}")
+        
+        n_chans = self.windows_dataset[0][0].shape[0] if self.windows_dataset else 22
+        n_classes = self.config.get('n_classes', 4)
+        input_window_samples = self.windows_dataset[0][0].shape[1] if self.windows_dataset else int(4 * 250)
+        
+        support_encoder = ShallowFBCSPEncoder(
+            torch.Size([n_chans, input_window_samples]),
+            'drop',
+            n_classes
+        )
+        
+        support_encoder.model.load_state_dict(torch.load(support_encoder_path))
+        
+        # Freeze support encoder
+        from core.utils import freeze_all_param_but
+        freeze_all_param_but(support_encoder.model, [])
+        
+        if self.device == 'cuda':
+            support_encoder = support_encoder.cuda()
+            
+        self.logger.info(f"Loaded pre-trained support encoder from {support_encoder_path}")
+        return support_encoder
+    
+    def create_supportnet_with_encoder(self, support_encoder):
+        """Create supportnet with pre-trained support encoder."""
+        n_chans = self.windows_dataset[0][0].shape[0] if self.windows_dataset else 22
+        n_classes = self.config.get('n_classes', 4)
+        input_window_samples = self.windows_dataset[0][0].shape[1] if self.windows_dataset else int(4 * 250)
+        
+        # Task encoder
+        task_encoder = ShallowFBCSPEncoder(
+            torch.Size([n_chans, input_window_samples]), 
+            'drop', 
+            n_classes
+        )
+        
+        # Classification head
+        classifier = torch.nn.Sequential(
+            torch.nn.Conv2d(40, n_classes, kernel_size=(144, 1)),
+            torch.nn.LogSoftmax(dim=1)
+        )
+        
+        supportnet = Supportnet(
+            support_encoder=support_encoder,
+            task_encoder=task_encoder,
+            classifier=classifier
+        )
+        
+        if self.device == 'cuda':
+            supportnet = supportnet.cuda()
+            
+        self.logger.info("Created supportnet with pre-trained support encoder")
+        return supportnet
+    
+    def prepare_meta_learning_data(self, subject_ids: List[int], target_subject: int):
+        """Prepare data loaders for meta-learning training."""
+        # Split dataset by subject
+        dataset_splitted_by_subject = self.windows_dataset.split('subject')
+        
+        src_train_loaders = []
+        src_valid_loaders = []
+        batch_size = self.config.get('meta_batch_size', 72)
+        
+        for subject_id in subject_ids:
+            if subject_id == target_subject:
+                self.logger.info(f'Excluding data from target subject {target_subject}')
+                continue
+                
+            subject_data = dataset_splitted_by_subject.get(f'{subject_id}')
+            if subject_data is None:
+                continue
+                
+            subject_splitted_by_run = subject_data.split('run')
+            
+            # Training set
+            train_set = subject_splitted_by_run.get('0train')
+            if train_set:
+                train_loader = DataLoader(
+                    train_set, 
+                    batch_size=batch_size, 
+                    shuffle=True, 
+                    drop_last=True
+                )
+                src_train_loaders.append(train_loader)
+            
+            # Validation set
+            valid_set = subject_splitted_by_run.get('1test')
+            if valid_set:
+                valid_loader = DataLoader(
+                    valid_set, 
+                    batch_size=batch_size, 
+                    shuffle=True, 
+                    drop_last=True
+                )
+                src_valid_loaders.append(valid_loader)
+        
+        return src_train_loaders, src_valid_loaders
+    
+    def meta_training_stage(self, src_train_loaders: List[DataLoader], 
+                           src_valid_loaders: List[DataLoader], 
+                           supportnet, target_subject: int) -> Dict[str, Any]:
+        """Train supportnet using meta-learning approach."""
+        
+        # Check if model already exists
+        supportnet_path = self.results_dir / f'adapt_to_{target_subject}_supportnet.pth'
+        
+        if supportnet_path.exists() and supportnet_path.stat().st_size > 0:
+            self.logger.info(f'Loading existing supportnet for target subject {target_subject}')
+            supportnet.load_state_dict(torch.load(supportnet_path))
+            return {'loaded_existing_model': True}
+        
+        # Training parameters
+        lr = self.config.get('lr', 6.5e-4)
+        weight_decay = self.config.get('weight_decay', 0)
+        n_epochs = self.config.get('n_epochs', 30)
+        n_classes = self.config.get('n_classes', 4)
+        
+        # Setup optimizer and scheduler
+        optimizer = torch.optim.AdamW(
+            supportnet.parameters(),
+            lr=lr, 
+            weight_decay=weight_decay
+        )
+        
+        if self.config.get('use_cosine_scheduler', True):
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=n_epochs - 1
+            )
+        else:
+            scheduler = None
+        
+        pred_loss_fn = torch.nn.CrossEntropyLoss()
+        
+        # Training loop
+        train_acc_lst, valid_acc_lst = [], []
+        supportnet.train()
+        
+        for epoch in range(1, n_epochs + 1):
+            self.logger.info(f"Meta-training epoch {epoch}/{n_epochs}")
+            
+            # Meta-training step
+            from core.utils import train_one_epoch_meta_subject
+            train_loss, train_acc = train_one_epoch_meta_subject(
+                src_train_loaders, 
+                supportnet,
+                pred_loss_fn,
+                optimizer,
+                scheduler,
+                self.device,
+                num_classes=n_classes
+            )
+            
+            # Validation step
+            import random
+            from core.utils import test_model_episodic
+            valid_loader = random.choice(src_valid_loaders)
+            valid_loss, valid_acc = test_model_episodic(
+                valid_loader,
+                supportnet,
+                pred_loss_fn,
+                num_classes=n_classes
+            )
+            
+            train_acc_lst.append(train_acc)
+            valid_acc_lst.append(valid_acc)
+            
+            if epoch % 5 == 0:
+                self.logger.info(
+                    f"Epoch {epoch}/{n_epochs}: train_acc={train_acc*100:.2f}%, "
+                    f"valid_acc={valid_acc*100:.2f}%"
+                )
+        
+        # Save trained model
+        torch.save(deepcopy(supportnet.state_dict()), supportnet_path)
+        self.logger.info(f"Saved supportnet to {supportnet_path}")
+        
+        return {
+            'train_accuracy': train_acc_lst,
+            'valid_accuracy': valid_acc_lst,
+            'target_subject': target_subject
+        }
+    
+    def evaluate_on_target_subject(self, supportnet, target_subject: int) -> float:
+        """Evaluate supportnet on target subject data."""
+        # Get target subject data
+        dataset_splitted_by_subject = self.windows_dataset.split('subject')
+        target_dataset = dataset_splitted_by_subject.get(f'{target_subject}')
+        
+        if target_dataset is None:
+            raise ValueError(f"No data found for target subject {target_subject}")
+        
+        batch_size = self.config.get('meta_batch_size', 72)
+        target_loader = DataLoader(target_dataset, batch_size=batch_size)
+        
+        # Evaluate
+        supportnet.eval()
+        pred_loss_fn = torch.nn.CrossEntropyLoss()
+        
+        from core.utils import test_model_episodic
+        target_loss, target_acc = test_model_episodic(
+            target_loader, 
+            supportnet, 
+            pred_loss_fn
+        )
+        
+        self.logger.info(f'Target subject {target_subject} accuracy: {target_acc*100:.2f}%')
+        return target_acc
+    
+    def run_experiment(self) -> Dict[str, Any]:
+        """Run the meta-learning class prototype attention experiment."""
+        # Load data
+        subject_ids = self.config.get('subject_ids', list(range(1, 14)))
+        self.load_data(subject_ids)
+        
+        all_results = {}
+        training_results = {}
+        
+        # Leave-one-out cross-validation
+        for target_subject in subject_ids:
+            self.logger.info(f"\n--- Meta-learning for target subject {target_subject} ---")
+            
+            try:
+                # Load pre-trained support encoder
+                support_encoder = self.load_pretrained_support_encoder(target_subject)
+                
+                # Create supportnet
+                supportnet = self.create_supportnet_with_encoder(support_encoder)
+                
+                # Prepare meta-learning data
+                src_train_loaders, src_valid_loaders = self.prepare_meta_learning_data(
+                    subject_ids, target_subject
+                )
+                
+                # Meta-training stage
+                training_result = self.meta_training_stage(
+                    src_train_loaders, src_valid_loaders, supportnet, target_subject
+                )
+                training_results[f'adapt_to_{target_subject}'] = training_result
+                
+                # Evaluation on target subject
+                target_accuracy = self.evaluate_on_target_subject(supportnet, target_subject)
+                all_results[f'adapt_to_{target_subject}'] = target_accuracy
+                
+            except Exception as e:
+                self.logger.error(f"Error processing target subject {target_subject}: {e}")
+                all_results[f'adapt_to_{target_subject}'] = None
+        
+        # Calculate overall statistics
+        valid_accuracies = [acc for acc in all_results.values() if acc is not None]
+        overall_results = {
+            'subject_results': all_results,
+            'training_results': training_results,
+            'mean_accuracy': np.mean(valid_accuracies) if valid_accuracies else 0,
+            'std_accuracy': np.std(valid_accuracies) if valid_accuracies else 0,
+            'config': self.config
+        }
+        
+        self.logger.info(
+            f"Overall meta-learning results: "
+            f"{overall_results['mean_accuracy']*100:.2f}% ± {overall_results['std_accuracy']*100:.2f}%"
+        )
+        
+        return overall_results
+    
+    def plot_results(self, results: Dict[str, Any]):
+        """Plot meta-learning experiment results."""
+        if 'subject_results' not in results:
+            self.logger.warning("No results to plot")
+            return
+        
+        subject_results = results['subject_results']
+        subject_ids = [int(k.split('_')[-1]) for k in subject_results.keys() if subject_results[k] is not None]
+        accuracies = [subject_results[f'adapt_to_{sid}'] for sid in subject_ids if subject_results[f'adapt_to_{sid}'] is not None]
+        
+        if not accuracies:
+            return
+        
+        # Create bar plot
+        plt.figure(figsize=(12, 6))
+        bars = plt.bar(range(len(subject_ids)), [acc*100 for acc in accuracies], 
+                      alpha=0.7, color='lightcoral', edgecolor='darkred')
+        
+        plt.xlabel('Target Subject ID')
+        plt.ylabel('Classification Accuracy (%)')
+        plt.title(f'{self._get_experiment_name()} - Meta-Learning Results')
+        plt.xticks(range(len(subject_ids)), subject_ids)
+        plt.grid(True, alpha=0.3, axis='y')
+        
+        # Add overall mean line
+        overall_mean = results.get('mean_accuracy', np.mean(accuracies)) * 100
+        plt.axhline(y=overall_mean, color='red', linestyle='--', alpha=0.7, 
+                   label=f'Overall Mean: {overall_mean:.1f}%')
+        plt.legend()
+        
+        # Add value labels on bars
+        for bar, acc in zip(bars, accuracies):
+            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
+                    f'{acc*100:.1f}%', ha='center', va='bottom', fontsize=9)
+        
+        # Save plot
+        plot_path = self.results_dir / 'meta_learning_results.png'
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        self.logger.info(f"Meta-learning results plot saved to {plot_path}")

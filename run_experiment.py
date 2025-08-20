@@ -62,6 +62,7 @@ def run_experiment_class(experiment_class_name: str, config_path: Optional[str] 
         
         # Contrastive learning experiments
         'ClassPrototypeAttentionExperiment': ('experiments.contrastive_learning.contrastive_learning_experiment', 'ClassPrototypeAttentionExperiment'),
+        'ClassPrototypeAttentionMetaExperiment': ('experiments.contrastive_learning.contrastive_learning_experiment', 'ClassPrototypeAttentionMetaExperiment'),
         'ContrastiveBetweenSubjectsExperiment': ('experiments.contrastive_learning.contrastive_learning_experiment', 'ContrastiveBetweenSubjectsExperiment'),
         
         # Traditional baselines
