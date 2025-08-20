@@ -1,6 +1,6 @@
 # HypernetBCI
 
-Model-agnostic Unsupervised Domain Adaptation (UDA) using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work.
+Model-agnostic Unsupervised Domain Adaptation (UDA) using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work. Publication is underway.
 
 ## Table of Contents
 
@@ -40,7 +40,9 @@ python run_experiment.py --experiment-class ClassPrototypeAttentionExperiment --
 ## Evaluation
 
 We focus on Unsupervised Domain Adaptation (UDA). The specific task we take on is quickly calibrating a pretrained DL-based
-BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. 
+BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. Datasets and model implementations are accessed from the [braindecode](https://braindecode.org/stable/index.html) library.
+
+We compare our method against three baselines, two unsupervised and one supervised. [CLUDA](https://arxiv.org/pdf/2206.06243) and [MAPU](https://arxiv.org/html/2406.02635v2) achieve UDA through contrastive learning and temporal imputation at test time. Although unsupervised, they require iterative optimization and source data for adaptation, which exclude them from time-sensitive and resource-constrained applications. 
 
 ## Codebase Structure
 
