@@ -10,6 +10,7 @@ import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime
 import logging
 
 import torch
@@ -260,6 +261,69 @@ class BaseExperiment(ABC):
         else:
             self.logger.warning(f'Results file not found: {results_path}')
             return {}
+    
+    def save_model(self, model: torch.nn.Module, filename: str = 'model.pth', 
+                   save_config: bool = True):
+        """
+        Save trained model weights and configuration.
+        
+        Args:
+            model: The trained PyTorch model
+            filename: Model filename (default: 'model.pth')
+            save_config: Whether to save model configuration alongside weights
+        """
+        from copy import deepcopy
+        
+        # Save model state dict
+        model_path = self.results_dir / filename
+        torch.save(deepcopy(model.state_dict()), model_path)
+        self.logger.info(f'Model weights saved to {model_path}')
+        
+        # Save model configuration for deployment
+        if save_config:
+            config_filename = filename.replace('.pth', '_config.json')
+            config_path = self.results_dir / config_filename
+            
+            # Create model configuration for deployment
+            model_config = {
+                'model_type': self.__class__.__name__.lower().replace('experiment', ''),
+                'model_class': model.__class__.__name__,
+                'experiment_config': self.config,
+                'input_shape': getattr(model, 'input_shape', None),
+                'output_shape': getattr(model, 'output_shape', None),
+                'created_at': str(datetime.now())
+            }
+            
+            with open(config_path, 'w') as f:
+                json.dump(model_config, f, indent=2)
+            self.logger.info(f'Model configuration saved to {config_path}')
+    
+    def load_model(self, filename: str = 'model.pth') -> Optional[torch.nn.Module]:
+        """
+        Load saved model weights.
+        
+        Args:
+            filename: Model filename to load
+            
+        Returns:
+            Loaded model with weights, or None if not found
+        """
+        model_path = self.results_dir / filename
+        if not model_path.exists():
+            self.logger.warning(f'Model file not found: {model_path}')
+            return None
+        
+        # Load state dict
+        state_dict = torch.load(model_path, map_location=self.device)
+        
+        # Try to create model and load weights
+        if hasattr(self, 'model') and self.model is not None:
+            self.model.load_state_dict(state_dict)
+            self.logger.info(f'Model weights loaded from {model_path}')
+            return self.model
+        else:
+            self.logger.warning('No model instance available. Create model first before loading weights.')
+            return None
     
     def plot_results(self, results: Dict[str, Any]):
         """Plot experiment results. Should be overridden by subclasses."""

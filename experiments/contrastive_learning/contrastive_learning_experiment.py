@@ -783,14 +783,15 @@ class ClassPrototypeAttentionMetaExperiment(ContrastiveLearningExperiment):
                     f"valid_acc={valid_acc*100:.2f}%"
                 )
         
-        # Save trained model
-        torch.save(deepcopy(supportnet.state_dict()), supportnet_path)
-        self.logger.info(f"Saved supportnet to {supportnet_path}")
+        # Save trained model using base class method
+        model_filename = f"supportnet_target_{target_subject}.pth"
+        self.save_model(supportnet, model_filename)
         
         return {
             'train_accuracy': train_acc_lst,
             'valid_accuracy': valid_acc_lst,
-            'target_subject': target_subject
+            'target_subject': target_subject,
+            'model_path': str(self.results_dir / model_filename)
         }
     
     def evaluate_on_target_subject(self, supportnet, target_subject: int) -> float:

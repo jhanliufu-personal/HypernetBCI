@@ -147,6 +147,11 @@ class BaselineExperiment(BaseExperiment):
                 if valid_dataset:
                     val_acc = self.evaluate_on_dataset(valid_dataset)
                     self.logger.info(f"Validation Accuracy: {val_acc:.4f}")
+        
+        # Save trained model after training completion
+        if hasattr(self, 'model') and self.model is not None:
+            model_filename = f"baseline_model_subjects_{'_'.join(map(str, self.config.get('subject_ids', ['unknown'])))}.pth"
+            self.save_model(self.model, model_filename)
     
     def evaluate_on_dataset(self, dataset):
         """Evaluate classifier on a dataset."""

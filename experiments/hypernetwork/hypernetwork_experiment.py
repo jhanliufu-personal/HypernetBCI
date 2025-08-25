@@ -138,10 +138,16 @@ class HypernetworkExperiment(BaseExperiment):
             if (epoch + 1) % 5 == 0:
                 self.logger.info(f"Pretrain Epoch {epoch + 1}/{n_epochs}, Loss: {epoch_loss:.4f}")
         
+        # Save the pretrained model
+        pretrain_subjects_str = "_".join(map(str, pretrain_subjects))
+        model_filename = f"hypernet_pretrained_subjects_{pretrain_subjects_str}.pth"
+        self.save_model(self.hypernet_model, model_filename)
+        
         self.logger.info("Pretraining completed")
         return {
             'pretrain_losses': pretrain_losses,
-            'pretrain_subjects': pretrain_subjects
+            'pretrain_subjects': pretrain_subjects,
+            'model_path': str(self.results_dir / model_filename)
         }
     
     def calibration_stage(self, calibration_subject: int, data_amounts: List[int], **kwargs) -> Dict[str, Any]:

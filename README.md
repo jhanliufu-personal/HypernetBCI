@@ -1,6 +1,5 @@
-# HyperUDA and SupportNet: zero-shot and few-shot DNN adaptation using hypernetwork and contrastive learning 
-
-Applied to create DNN-based self-calibrating brain computer interface (BCI). This is Jhan's Bachelor's [thesis]() work. Publication is underway.
+# HyperUDA and SupportNet: On-the-fly DNN adaptation via hypernetwork and contrastive learning 
+Zero-shot (**HyperUDA**) and few-shot (**SupportNet**) DNN adaptation framework. Applied to create self-calibrating brain computer interface (BCI). This is Jhan's Bachelor's [thesis](https://drive.google.com/file/d/1e1tz0d7byPFJd3UlHKA0W-OMbwF2Pg_s/view?usp=sharing) work. Publication is underway.
 
 ## Table of Contents
 
