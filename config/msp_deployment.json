@@ -1,0 +1,53 @@
+{
+  "target_memory_kb": 512,
+  "quantize": true,
+  "prune_threshold": 0.01,
+  "use_fixed_point": true,
+  "input_shape": [1, 22, 1000],
+  "optimization_level": "O2",
+  "target_platform": "msp432",
+  
+  "model_specific": {
+    "hypernet": {
+      "primary_net_config": {
+        "n_chans": 22,
+        "n_classes": 4,
+        "input_window_samples": 1000,
+        "final_conv_length": "auto"
+      },
+      "embedder_config": {
+        "embedding_dim": 32,
+        "embedding_length": 128,
+        "embedder_type": "EEGConformer"
+      }
+    },
+    "supportnet": {
+      "encoder_config": {
+        "embedding_dim": 40,
+        "embedding_length": 144,
+        "encoder_type": "EEGConformer"
+      },
+      "classifier_config": {
+        "n_chans": 80,
+        "n_classes": 4,
+        "input_window_samples": 144
+      }
+    }
+  },
+  
+  "msp_settings": {
+    "clock_frequency_mhz": 48,
+    "ram_size_kb": 64,
+    "flash_size_kb": 256,
+    "enable_fpu": true,
+    "power_mode": "low_power"
+  },
+  
+  "preprocessing": {
+    "apply_bandpass": true,
+    "bandpass_low": 8.0,
+    "bandpass_high": 30.0,
+    "apply_car": true,
+    "normalize": true
+  }
+}

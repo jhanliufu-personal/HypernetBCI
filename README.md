@@ -1,6 +1,6 @@
-# HypernetBCI
+# HyperUDA and SupportNet: zero-shot and few-shot DNN adaptation using hypernetwork and contrastive learning 
 
-Zero-shot and few-shot model adaptation using hypernetworks and contrastive learning. Quick calibration of DL-based brain computer interface (BCI) models as an application. This is Jhan's Bachelor's [thesis]() work. Publication is underway.
+Applied to create DNN-based self-calibrating brain computer interface (BCI). This is Jhan's Bachelor's [thesis]() work. Publication is underway.
 
 ## Table of Contents
 
@@ -9,6 +9,7 @@ Zero-shot and few-shot model adaptation using hypernetworks and contrastive lear
 - [Codebase Structure](#codebase-structure)
 - [HyperNet Experiments](#hypernet-experiments)
 - [SupportNet Experiments](#supportnet-experiments)
+- [MSP Deployment](#msp-deployment)
 
 ## Quickstart
 
@@ -22,6 +23,12 @@ cd HypernetBCI/METHODS/HypernetBCI
 # Create conda environment
 conda env create -f environment.yml
 conda activate hypernetbci
+
+# Clone and setup Lupe for MSP deployment (optional)
+git clone https://github.com/mingyuan-xiang/lupe.git
+cd lupe
+pip install -e .
+cd ..
 ```
 
 ### Run an Experiment
@@ -43,6 +50,8 @@ We focus on domain adaptation (DA). The specific task we take on is quickly cali
 BCI model to an unseen individual, whose brain and neural signal features (hopefully) differ from the pretrain set. We selected two BCI tasks (datasets) for evaluation, a [motor](https://moabb.neurotechx.com/docs/generated/moabb.datasets.Schirrmeister2017.html) imagery decoding task and a [sleep](https://braindecode.org/stable/generated/braindecode.datasets.SleepPhysionet.html) staging task. The BCI models we selected are [ShallowFBCSPNet](https://braindecode.org/0.7/generated/braindecode.models.ShallowFBCSPNet.html#braindecode.models.ShallowFBCSPNet), [SleepStagerChambon2018](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerChambon2018.html#braindecode.models.SleepStagerChambon2018), [SleepStagerEldele2021](https://braindecode.org/0.7/generated/braindecode.models.SleepStagerEldele2021.html#braindecode.models.SleepStagerEldele2021) and [TCN](https://braindecode.org/0.7/generated/braindecode.models.TCN.html#braindecode.models.TCN). These models involve well-known architectures such as temporal convolution and transformers. Datasets and model implementations are from the [braindecode](https://braindecode.org/stable/index.html) library.
 
 We compare our method against two baselines. [CLUDA](https://arxiv.org/pdf/2206.06243) and [MAPU](https://arxiv.org/html/2406.02635v2) achieve zero-shot adaptation through contrastive learning and temporal imputation at test time. Although unsupervised, they require iterative optimization and source data for adaptation, which exclude them from time-sensitive and resource-constrained applications. We also compare our method to supervised fine tuning.
+
+Since we care about resource-constrained applications, we profile our adaptation method on a microcontroller (TI MSP430). We measure its computational cost in energy and FLOP unit. MSP430 requires C code; we use [Lupe](https://github.com/mingyuan-xiang/lupe/tree/main) to convert trained PyTorch model to its optimized C representation, ready to be deployed on MSP. See the [MSP Deployment](#msp-deployment) section for details. 
 
 ## Codebase Structure
 
@@ -69,7 +78,8 @@ HypernetBCI/
 │   ├── MAPU/                      # Multi-source Adversarial Domain Adaptation
 │   └── CLUDA/                     # Cross-participant Learning using Domain Adaptation
 ├── config/                        # Experiment configuration files (JSON)
-└── run_experiment.py              # Unified experiment runner
+├── run_experiment.py              # Unified experiment runner
+└── deploy_to_msp.py               # Generate optimized C code for deploying trained model on MSP          
 ```
 
 ### Folder Details
@@ -132,3 +142,47 @@ is fully unsupervised and free of iterative optimization. Adaption is done throu
 - **Support Sets**: Small labeled datasets used to compute class prototypes
 - **Query Sets**: Test data for few-shot evaluation
 - **Attention Over Prototypes**: Dynamic weighting of class prototypes based on query similarity
+
+## MSP Deployment
+
+Deploy trained HypernetBCI models to MSP (Texas Instruments microcontrollers) for edge BCI applications using the [Lupe](https://github.com/mingyuan-xiang/lupe) framework.
+
+### Setup
+
+Lupe converts PyTorch models to optimized C code for MSP deployment:
+
+```bash
+# Clone and install Lupe (if not done during initial setup)
+git clone https://github.com/mingyuan-xiang/lupe.git
+cd lupe
+pip install -e .
+cd ..
+```
+
+### Convert Model for MSP
+
+Use the MSP deployment script to convert trained models:
+
+```bash
+# Convert a trained HyperNet model
+python deploy_to_msp.py --model-type hypernet --model-path results/hypernet_model.pth --output-dir msp_deployment/
+
+# Convert a trained SupportNet model
+python deploy_to_msp.py --model-type supportnet --model-path results/supportnet_model.pth --output-dir msp_deployment/
+
+# Convert with custom configuration
+python deploy_to_msp.py --model-type hypernet --model-path results/hypernet_model.pth --config config/msp_deployment.json --output-dir msp_deployment/
+```
+
+### MSP Deployment Features
+
+- **ONNX Export**: Converts PyTorch models to ONNX format
+- **C Code Generation**: Uses Lupe to generate optimized C code for MSP
+- **Memory Optimization**: Quantization and pruning for resource-constrained deployment
+- **Model Validation**: Compares outputs between PyTorch and C implementations
+
+The deployment script handles:
+- Model loading and preprocessing
+- ONNX export with proper input/output shapes
+- Lupe integration for C code generation
+- Validation and testing of converted models
